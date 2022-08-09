@@ -109,14 +109,14 @@ function blockStraight (params: ExtendedParams): RecursiveArray<Geometry> | Geom
 function arcSurface (params: ExtendedParams): RecursiveArray<Geometry> | Geometry {
   const result: RecursiveArray<Geometry> | Geometry = []
   const middlePointWidest =
-            params.baseKeyboardHeight * params.Keyboard_depth_mult + params.Keyboard_arc_origin[1]
+    params.baseKeyboardHeight * params.Keyboard_depth_mult + params.Keyboard_arc_origin[1]
+
   const middleLine1: BezierControlPoints = [
     params.Keyboard_arc_origin,
     [0, middlePointWidest * 0.65, params.Keyboard_arc_origin[2]],
     [0, middlePointWidest * 0.85, params.Arc_height_max * 0.99],
     [0, middlePointWidest, params.Arc_height_max]
   ]
-
   const middleLine2 = joinBezierByTangent(middleLine1, [
     [0, (middlePointWidest + 67) * 0.90, params.Arc_height_max * 1.02],
     [0, middlePointWidest + 67, 13.50]
