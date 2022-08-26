@@ -1,4 +1,6 @@
 // Main
+
+debug=true;
 key_padding=4; // [0:6]
 key_width=14.75; // [4:0.25:20]
 surface_quality = 0.8; // [0:0.1:1]
@@ -119,47 +121,52 @@ module draw_arrow_block() mirror([0,1,0])
   }
 }
 
+module mesh_cloud(points) {
+    for (p = points) translate(p) sphere(radius);
+}
+
 module draw_keyboard() mirror([0,1,0])
 {
-    top_line=[
-        [0, keyboard_depth_shift, arc_height],
-        [8, 18, arc_height],
-        [27, 14.5, 18],
-        [64, 7.7, 10.5],
-        [99, 3.5, 3.75],
-        [arc_width, 0, 0]
-    ];
-    s=keyboard_depth_shift + (t_keyboard_height*  keyboard_depth_mult) ;
-    echo(s);
-    middle_line=[
-        top_line.x,
-        [0,s , arc_height_max ],
-        [0, s + 67 , 13.5],
-        [0, s + 67 +23, 0]
-    ];
-    final_line=[
-    middle_line.y,
-    [arc_width, t_keyboard_height, 0]
-    ];
+
+    // top_line=[
+    //     [0, keyboard_depth_shift, arc_height],
+    //     [8, 18, arc_height],
+    //     [27, 14.5, 18],
+    //     [64, 7.7, 10.5],
+    //     [99, 3.5, 3.75],
+    //     [arc_width, 0, 0]
+    // ];
+    // s=keyboard_depth_shift + (t_keyboard_height*  keyboard_depth_mult) ;
+    // echo(s);
+    // middle_line=[
+    //     top_line.x,
+    //     [0,s , arc_height_max ],
+    //     [0, s + 67 , 13.5],
+    //     [0, s + 67 +23, 0]
+    // ];
+    // final_line=[
+    // middle_line.y,
+    // [arc_width, t_keyboard_height, 0]
+    // ];
     
-    top_lines=_v_mass_offset(top_line, [
-    0,
-    key_margin,
-    key_small,
-    key_padding,
-    key_width,
-    key_padding,
-    key_width,
-    key_padding,
-    key_width,
-    key_padding,
-    key_width,
-    key_padding,
-    key_width * keyboard_depth_mult,
-    key_margin,
-    ]);
+    // top_lines=_v_mass_offset(top_line, [
+    // 0,
+    // key_margin,
+    // key_small,
+    // key_padding,
+    // key_width,
+    // key_padding,
+    // key_width,
+    // key_padding,
+    // key_width,
+    // key_padding,
+    // key_width,
+    // key_padding,
+    // key_width * keyboard_depth_mult,
+    // key_margin,
+    // ]);
     
-    for(lines=top_lines) draw_beziered_polyline(lines);
+    // for(lines=top_lines) mesh_cloud(lines);
     
 }
 
@@ -167,9 +174,13 @@ module draw_top_cover()
 {
     draw_keyboard();
 
-    translate([arc_width + key_padding, 0, 0])
-    {
-      draw_arrow_block();
-      place_on_grid([3,0]) draw_numpad();
-    }
+    // translate([arc_width + key_padding, 0, 0])
+    // {
+    //   draw_arrow_block();
+    //   place_on_grid([3,0]) draw_numpad();
+    // }
 }
+
+draw_top_cover();
+
+if(debug) translate()
