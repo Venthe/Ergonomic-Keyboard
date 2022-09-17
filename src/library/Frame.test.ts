@@ -1,10 +1,10 @@
 import { BezierControlPoints } from './bezier'
-import { Frame } from './Frame'
-import { toBeDeepCloseTo } from 'jest-matcher-deep-close-to'
+import { FrameContext } from './Frame'
+import { toMatchCloseTo } from 'jest-matcher-deep-close-to'
 
-expect.extend({ toBeDeepCloseTo })
+expect.extend({ toMatchCloseTo })
 
-it('frame', () => {
+it('FrameContext', () => {
   // Given
   const controlPoints: BezierControlPoints = [
     [0, 0, 0],
@@ -14,10 +14,10 @@ it('frame', () => {
   ]
 
   // when
-  const frames = Frame.generateFramesForBezier(controlPoints, 1)
+  const frameContext = FrameContext.generateFramesForBezier(controlPoints, 1)
 
   // Then
-  expect(frames).toBeDeepCloseTo([
+  expect(frameContext.frames).toMatchCloseTo([
     {
       step: 0,
       origin: [0, 0, 0],
@@ -32,6 +32,6 @@ it('frame', () => {
       rotationalAxis: [0, 0, 0],
       normal: [0, 0, 0]
     }
-  ])
-  expect(frames).toHaveLength(2)
+  ], 5)
+  expect(frameContext.frames).toHaveLength(2)
 })

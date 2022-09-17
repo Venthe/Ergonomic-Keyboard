@@ -6,7 +6,7 @@ import { sphere } from '@jscad/modeling/src/primitives'
 import RecursiveArray from '@jscad/modeling/src/utils/recursiveArray'
 import { ExtendedParams } from '../keyboardTypes'
 import { BezierControlPoints, drawBezierControlPoints } from './bezier'
-import { Frame } from './Frame'
+import { FrameContext } from './Frame'
 import { add, scale } from './vector3'
 
 export const drawLine = (a: Vec3, b: Vec3, size = 0.5): Geometry => {
@@ -50,28 +50,28 @@ export const drawPoints = (
 ): RecursiveArray<Geometry> | Geometry => {
   const result: RecursiveArray<Geometry> | Geometry = []
 
-  const generatedFrames = Frame.generateFramesForBezier(points, steps)
+  const frameContext = FrameContext.generateFramesForBezier(points, steps)
 
-  result.push(colorize(color, drawPolyline(generatedFrames.map(frame => frame.origin), params.Debug_point_base_size * 0.4)))
+  result.push(colorize(color, drawPolyline(frameContext.frames.map(frame => frame.origin), params.Debug_point_base_size * 0.4)))
 
   if (drawNormal) {
-    result.push(colorize([1, 0, 1], generatedFrames.map(frame => drawLine(frame.origin, add(frame.origin, scale(frame.normal, 50)), params.Debug_point_base_size))))
+    result.push(colorize([1, 0, 1], frameContext.frames.map(frame => drawLine(frame.origin, add(frame.origin, scale(frame.normal, 50)), params.Debug_point_base_size))))
   }
 
   if (drawTangent) {
-    result.push(colorize([0, 0, 0], generatedFrames.map(frame => drawLine(frame.origin, add(frame.origin, scale(frame.tangent, 50)), params.Debug_point_base_size))))
+    result.push(colorize([0, 0, 0], frameContext.frames.map(frame => drawLine(frame.origin, add(frame.origin, scale(frame.tangent, 50)), params.Debug_point_base_size))))
   }
 
   if (drawControlLine) {
     result.push(
       colorize([1, 1, 0, 0.6],
-        drawPolyline(points, params.Debug_point_base_size * 0.5)
+        drawPolyline(frameContext.controlPoints, params.Debug_point_base_size * 0.5)
       )
     )
   }
 
   if (drawControlPoints) {
-    result.push(drawBezierControlPoints(points, 1.2))
+    result.push(drawBezierControlPoints(frameContext.controlPoints, 1.2))
   }
 
   return result

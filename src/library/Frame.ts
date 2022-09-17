@@ -2,6 +2,26 @@ import { Vec3 } from '@jscad/modeling/src/maths/types'
 import { scale, subtract, add, dot, cross, normalize } from './vector3'
 import { BezierControlPoints, bezier3 } from './bezier'
 
+export class FrameContext {
+  readonly frames: Frame[] = []
+  private readonly stepSize: number
+
+  constructor (readonly controlPoints: BezierControlPoints, private readonly steps: number) {
+    const firstFrame = Frame.generateFrenetFrame(0, controlPoints)
+    this.frames.push(firstFrame)
+    this.stepSize = 1 / steps
+
+    for (let i = 1; i < steps + 1; i += 1) {
+      const previousFrame = this.frames[i - 1]
+      this.frames.push(previousFrame.generateNextRotationMinimizingFrame(this.stepSize, controlPoints))
+    }
+  }
+
+  public static generateFramesForBezier (controlPoints: BezierControlPoints, steps: number): FrameContext {
+    return new FrameContext(controlPoints, steps)
+  }
+}
+
 export class Frame {
   /**
   *
@@ -99,18 +119,5 @@ export class Frame {
 
   private static frenetNormal (step: number, controlPoints: BezierControlPoints): Vec3 {
     return normalize(cross(Frame.frenetRotationalAxis(step, controlPoints), Frame.frenetTangent(step, controlPoints)))
-  }
-
-  public static generateFramesForBezier (controlPoints: BezierControlPoints, steps: number): Frame[] {
-    const firstFrame = Frame.generateFrenetFrame(0, controlPoints)
-    const frames = [firstFrame]
-    const singleStep = 1 / steps
-
-    for (let i = 1; i < steps + 1; i += 1) {
-      const previousFrame = frames[i - 1]
-      frames.push(previousFrame.generateNextRotationMinimizingFrame(singleStep, controlPoints))
-    }
-
-    return frames
   }
 }
