@@ -4,8 +4,9 @@ import { mirror, translate } from '@jscad/modeling/src/operations/transforms'
 import RecursiveArray from '@jscad/modeling/src/utils/recursiveArray'
 import { Entrypoint, MainFunction, ParameterDefinitions } from './jscad'
 import { ExtendedParams, Params, Variables } from './keyboardTypes'
-import { BezierControlPoints, joinBezierByTangent } from './library/bezier'
+import { joinBezierByTangent } from './library/bezier'
 import { drawPoints } from './library/draw'
+import { FrameContext } from './library/Frame'
 import { constructionLine } from './library/utilities'
 
 const getParameterDefinitions = (): ParameterDefinitions => [
@@ -108,23 +109,26 @@ function blockStraight (params: ExtendedParams): RecursiveArray<Geometry> | Geom
 
 function arcSurface (params: ExtendedParams): RecursiveArray<Geometry> | Geometry {
   const result: RecursiveArray<Geometry> | Geometry = []
+
+  const bezierSteps = 10
+
   const middlePointWidest =
     params.baseKeyboardHeight * params.Keyboard_depth_mult + params.Keyboard_arc_origin[1]
 
-  const middleLine1: BezierControlPoints = [
+  const middleLine1: FrameContext = FrameContext.generateRotationMinimizingFrames([
     params.Keyboard_arc_origin,
     [0, middlePointWidest * 0.65, params.Keyboard_arc_origin[2]],
     [0, middlePointWidest * 0.85, params.Arc_height_max * 0.99],
     [0, middlePointWidest, params.Arc_height_max]
-  ]
-  const middleLine2 = joinBezierByTangent(middleLine1, [
+  ], bezierSteps)
+  const middleLine2 = FrameContext.generateRotationMinimizingFrames(joinBezierByTangent(middleLine1.controlPoints, [
     [0, (middlePointWidest + 67) * 0.90, params.Arc_height_max * 1.02],
     [0, middlePointWidest + 67, 13.50]
-  ], 0.8)
-  const middleLine3 = joinBezierByTangent(middleLine2, [
-    [0, middleLine2[3][1] + 21, middleLine2[3][2] * 0.3],
-    [0, middleLine2[3][1] + 23, 0]
-  ], 0.7)
+  ], 0.8), bezierSteps)
+  const middleLine3 = FrameContext.generateRotationMinimizingFrames(joinBezierByTangent(middleLine2.controlPoints, [
+    [0, middleLine2.controlPoints[3][1] + 21, middleLine2.controlPoints[3][2] * 0.3],
+    [0, middleLine2.controlPoints[3][1] + 23, 0]
+  ], 0.7), bezierSteps)
 
   result.push(
     drawPoints(middleLine1, params, { color: [1, 0, 0] }),
@@ -135,7 +139,7 @@ function arcSurface (params: ExtendedParams): RecursiveArray<Geometry> | Geometr
   const keyboardArcEnd: Vec3 = [params.Arc_width, 0, 0]
   const keyboardArcEnd2: Vec3 = [params.Arc_width, params.baseKeyboardHeight, 0]
 
-  const endLine: BezierControlPoints = [
+  const endLine: FrameContext = FrameContext.generateRotationMinimizingFrames([
     keyboardArcEnd,
     [keyboardArcEnd[0], (keyboardArcEnd2)[1] / 3, (keyboardArcEnd2)[2] / 3],
     [
@@ -143,39 +147,39 @@ function arcSurface (params: ExtendedParams): RecursiveArray<Geometry> | Geometr
       (keyboardArcEnd2)[2] * 2 / 3
     ],
     keyboardArcEnd2
-  ]
+  ], bezierSteps)
 
   result.push(drawPoints(endLine, params, { color: [1, 0, 0] }))
 
-  const backLine1: BezierControlPoints = [
-    middleLine1[0],
-    [2, 18.5, middleLine1[0][2]],
-    [5, 18.4, middleLine1[0][2]],
-    [8, 18, middleLine1[0][2]]
-  ]
-  const backLine2: BezierControlPoints = joinBezierByTangent(backLine1, [
+  const backLine1: FrameContext = FrameContext.generateRotationMinimizingFrames([
+    middleLine1.controlPoints[0],
+    [2, 18.5, middleLine1.controlPoints[0][2]],
+    [5, 18.4, middleLine1.controlPoints[0][2]],
+    [8, 18, middleLine1.controlPoints[0][2]]
+  ], bezierSteps)
+  const backLine2: FrameContext = FrameContext.generateRotationMinimizingFrames(joinBezierByTangent(backLine1.controlPoints, [
     [35, 13, 17.5],
     [48.25, 10.5, 14]
-  ], 1)
-  const backLine3: BezierControlPoints = joinBezierByTangent(backLine2, [
+  ], 1), bezierSteps)
+  const backLine3: FrameContext = FrameContext.generateRotationMinimizingFrames(joinBezierByTangent(backLine2.controlPoints, [
     [75, 5.7, 8],
     [85.75, 4.5, 6]
-  ], 1)
-  const backLine4: BezierControlPoints = joinBezierByTangent(backLine3, [
+  ], 1), bezierSteps)
+  const backLine4: FrameContext = FrameContext.generateRotationMinimizingFrames(joinBezierByTangent(backLine3.controlPoints, [
     [110, 2, 2.5],
     [123.25, 1.2, 1]
-  ])
-  const backLine5 = joinBezierByTangent(backLine4, [
-    [endLine[0][0] - 18, 0, 0],
-    [endLine[0][0] - 16, 0, 0]
-  ], 0.5)
-  const backLine6: BezierControlPoints = joinBezierByTangent(backLine5, [
-    [endLine[0][0] - 5, 0, endLine[0][2]],
-    endLine[0]
-  ])
-  const backLines: BezierControlPoints[] = [backLine1, backLine2, backLine3, backLine4, backLine5, backLine6]
+  ]), bezierSteps)
+  const backLine5: FrameContext = FrameContext.generateRotationMinimizingFrames(joinBezierByTangent(backLine4.controlPoints, [
+    [endLine.controlPoints[0][0] - 18, 0, 0],
+    [endLine.controlPoints[0][0] - 16, 0, 0]
+  ], 0.5), bezierSteps)
+  const backLine6: FrameContext = FrameContext.generateRotationMinimizingFrames(joinBezierByTangent(backLine5.controlPoints, [
+    [endLine.controlPoints[0][0] - 5, 0, endLine.controlPoints[0][2]],
+    endLine.controlPoints[0]
+  ]), bezierSteps)
+  const backLineContexts: FrameContext[] = [backLine1, backLine2, backLine3, backLine4, backLine5, backLine6]
 
-  result.push(backLines.map(line => drawPoints(line, params, { color: [1, 0, 0] })))
+  result.push(backLineContexts.map(frameContext => drawPoints(frameContext, params, { color: [1, 0, 0] })))
 
   //     // points = [
   //     //   Keyboard_offset,

@@ -5,7 +5,7 @@ import hulls from '@jscad/modeling/src/operations/hulls'
 import { sphere } from '@jscad/modeling/src/primitives'
 import RecursiveArray from '@jscad/modeling/src/utils/recursiveArray'
 import { ExtendedParams } from '../keyboardTypes'
-import { BezierControlPoints, drawBezierControlPoints } from './bezier'
+import { drawBezierControlPoints } from './bezier'
 import { FrameContext } from './Frame'
 import { add, scale } from './vector3'
 
@@ -37,20 +37,17 @@ export interface DrawPointsOptions {
 
 // TODO: Continuous line between frames
 export const drawPoints = (
-  points: BezierControlPoints,
+  frameContext: FrameContext,
   params: ExtendedParams,
   {
     color = [1, 1, 1],
     drawNormal = false,
     drawTangent = false,
     drawControlPoints = false,
-    drawControlLine = false,
-    steps = 10
+    drawControlLine = false
   }: DrawPointsOptions
 ): RecursiveArray<Geometry> | Geometry => {
   const result: RecursiveArray<Geometry> | Geometry = []
-
-  const frameContext = FrameContext.generateRotationMinimizingFrames(points, steps)
 
   result.push(colorize(color, drawPolyline(frameContext.frames.map(frame => frame.origin), params.Debug_point_base_size * 0.4)))
 
