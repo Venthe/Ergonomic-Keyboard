@@ -1,6 +1,6 @@
 import { Geometry } from '@jscad/modeling/src/geometries/types'
 import { Vec3 } from '@jscad/modeling/src/maths/vec3'
-import { mirror, translate } from '@jscad/modeling/src/operations/transforms'
+import { mirror, rotate, translate } from '@jscad/modeling/src/operations/transforms'
 import RecursiveArray from '@jscad/modeling/src/utils/recursiveArray'
 import { Entrypoint, MainFunction, ParameterDefinitions } from './jscad'
 import { ExtendedParams, Params, Variables } from './keyboardTypes'
@@ -196,8 +196,12 @@ function arcSurface (params: ExtendedParams): RecursiveArray<Geometry> | Geometr
   result.push(
     backLineFrameContexts
       .map(context => context.frames[0])
-      .map(frame => frame.origin)
-      .map(origin => translate(subtract(origin, middleLine1.controlPoints[0]), middleLine))
+      .map(frame => {
+        const ml1 = translate(subtract([0, 0, 0], middleLine1.controlPoints[0]), middleLine)
+        const ml2 = rotate(frame.normal, ml1)
+
+        return translate(frame.origin, ml2)
+      })
   )
 
   //     // points = [
