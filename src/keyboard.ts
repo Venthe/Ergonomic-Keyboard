@@ -4,8 +4,8 @@ import { mirror, translate } from '@jscad/modeling/src/operations/transforms'
 import RecursiveArray from '@jscad/modeling/src/utils/recursiveArray'
 import { Entrypoint, MainFunction, ParameterDefinitions } from './jscad'
 import { ExtendedParams, Params, Variables } from './keyboardTypes'
-import { BezierControlPoints, joinBezierByTangent, weightedSteps } from './library/bezier'
-import { drawPoints } from './library/draw'
+import { BezierControlPoints, joinBezierByTangent } from './library/bezier'
+import { drawContinuousPoints, drawPoints } from './library/draw'
 import { FrameContext } from './library/Frame'
 import { constructionLine } from './library/utilities'
 
@@ -178,17 +178,18 @@ function arcSurface (params: ExtendedParams): RecursiveArray<Geometry> | Geometr
     endLine.controlPoints[0]
   ])
 
-  const weighted = weightedSteps([backLine1Points, backLine2Points, backLine3Points, backLine4Points, backLine5Points, backLine6Points], 50)
-
-  const backLine1Context: FrameContext = FrameContext.generateRotationMinimizingFrames(backLine1Points, weighted[0])
-  const backLine2Context: FrameContext = FrameContext.generateRotationMinimizingFrames(backLine2Points, weighted[1], backLine1Context.lastFrame())
-  const backLine3Context: FrameContext = FrameContext.generateRotationMinimizingFrames(backLine3Points, weighted[2], backLine2Context.lastFrame())
-  const backLine4Context: FrameContext = FrameContext.generateRotationMinimizingFrames(backLine4Points, weighted[3], backLine3Context.lastFrame())
-  const backLine5Context: FrameContext = FrameContext.generateRotationMinimizingFrames(backLine5Points, weighted[4], backLine4Context.lastFrame())
-  const backLine6Context: FrameContext = FrameContext.generateRotationMinimizingFrames(backLine6Points, weighted[5], backLine5Context.lastFrame())
-  const backLineContexts: FrameContext[] = [backLine1Context, backLine2Context, backLine3Context, backLine4Context, backLine5Context, backLine6Context]
-
-  result.push(backLineContexts.map(frameContext => drawPoints(frameContext, params, { color: [1, 0, 0] })))
+  result.push(
+    drawContinuousPoints([
+      backLine1Points,
+      backLine2Points,
+      backLine3Points,
+      backLine4Points,
+      backLine5Points,
+      backLine6Points
+    ],
+    { fidelity: 50 }
+    ).map(frameContext => drawPoints(frameContext, params, { color: [1, 0, 0] }))
+  )
 
   //     // points = [
   //     //   Keyboard_offset,

@@ -5,7 +5,7 @@ import hulls from '@jscad/modeling/src/operations/hulls'
 import { sphere } from '@jscad/modeling/src/primitives'
 import RecursiveArray from '@jscad/modeling/src/utils/recursiveArray'
 import { ExtendedParams } from '../keyboardTypes'
-import { drawBezierControlPoints } from './bezier'
+import { BezierControlPoints, drawBezierControlPoints, weightedSteps } from './bezier'
 import { FrameContext } from './Frame'
 import { add, scale } from './vector3'
 
@@ -71,4 +71,16 @@ export const drawPoints = (
   }
 
   return result
+}
+
+export const drawContinuousPoints = (controlPoints: BezierControlPoints[], { fidelity = 100 }: { color?: RGB | RGBA, fidelity?: number }): FrameContext[] => {
+  const weighted = weightedSteps(controlPoints, fidelity)
+
+  const contexts: FrameContext[] = []
+
+  for (let i = 0; i < weighted.length; i++) {
+    contexts.push(FrameContext.generateRotationMinimizingFrames(controlPoints[i], weighted[i], i === 0 ? undefined : contexts[i - 1].lastFrame()))
+  }
+
+  return contexts
 }
