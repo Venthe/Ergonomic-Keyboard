@@ -10,9 +10,9 @@ export class FrameContext {
     this.stepSize = 1 / steps
   }
 
-  public static generateRotationMinimizingFrames (controlPoints: BezierControlPoints, steps: number): FrameContext {
+  public static generateRotationMinimizingFrames (controlPoints: BezierControlPoints, steps: number, originFrame?: Frame): FrameContext {
     const frameContext = new FrameContext(controlPoints, steps)
-    const firstFrame = Frame.generateFrenetFrame(0, frameContext)
+    const firstFrame = Frame.generateFrenetFrame(0, frameContext, originFrame)
     frameContext.frames.push(firstFrame)
 
     for (let i = 1; i < steps + 1; i += 1) {
@@ -29,6 +29,10 @@ export class FrameContext {
       frameContext.frames.push(Frame.generateFrenetFrame(i, frameContext))
     }
     return frameContext
+  }
+
+  lastFrame (): Frame {
+    return this.frames[this.frames.length - 1]
   }
 }
 
@@ -67,11 +71,11 @@ export class Frame {
     )
   }
 
-  public static generateFrenetFrame (step: number, context: FrameContext): Frame {
+  public static generateFrenetFrame (step: number, context: FrameContext, originFrame?: Frame): Frame {
     const origin = bezier3(step, context.controlPoints)
     const tangent = Frame.frenetTangent(step, context.controlPoints)
-    const rotationalAxis = Frame.frenetRotationalAxis(step, context.controlPoints)
-    const normal = Frame.frenetNormal(step, context.controlPoints)
+    const rotationalAxis = originFrame?.rotationalAxis ?? Frame.frenetRotationalAxis(step, context.controlPoints)
+    const normal = originFrame?.normal ?? Frame.frenetNormal(step, context.controlPoints)
 
     return new Frame(origin, tangent, rotationalAxis, normal, step, context)
   }

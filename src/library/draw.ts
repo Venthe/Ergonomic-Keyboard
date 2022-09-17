@@ -35,13 +35,12 @@ export interface DrawPointsOptions {
   steps?: number
 }
 
-// TODO: Continuous line between frames
 export const drawPoints = (
   frameContext: FrameContext,
   params: ExtendedParams,
   {
     color = [1, 1, 1],
-    drawNormal = false,
+    drawNormal = true,
     drawTangent = false,
     drawControlPoints = false,
     drawControlLine = false

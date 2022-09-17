@@ -124,11 +124,11 @@ function arcSurface (params: ExtendedParams): RecursiveArray<Geometry> | Geometr
   const middleLine2 = FrameContext.generateRotationMinimizingFrames(joinBezierByTangent(middleLine1.controlPoints, [
     [0, (middlePointWidest + 67) * 0.90, params.Arc_height_max * 1.02],
     [0, middlePointWidest + 67, 13.50]
-  ], 0.8), bezierSteps)
+  ], 0.8), bezierSteps, middleLine1.lastFrame())
   const middleLine3 = FrameContext.generateRotationMinimizingFrames(joinBezierByTangent(middleLine2.controlPoints, [
     [0, middleLine2.controlPoints[3][1] + 21, middleLine2.controlPoints[3][2] * 0.3],
     [0, middleLine2.controlPoints[3][1] + 23, 0]
-  ], 0.7), bezierSteps)
+  ], 0.7), bezierSteps, middleLine2.lastFrame())
 
   result.push(
     drawPoints(middleLine1, params, { color: [1, 0, 0] }),
@@ -160,23 +160,23 @@ function arcSurface (params: ExtendedParams): RecursiveArray<Geometry> | Geometr
   const backLine2: FrameContext = FrameContext.generateRotationMinimizingFrames(joinBezierByTangent(backLine1.controlPoints, [
     [35, 13, 17.5],
     [48.25, 10.5, 14]
-  ], 1), bezierSteps)
+  ], 1), bezierSteps, backLine1.lastFrame())
   const backLine3: FrameContext = FrameContext.generateRotationMinimizingFrames(joinBezierByTangent(backLine2.controlPoints, [
     [75, 5.7, 8],
     [85.75, 4.5, 6]
-  ], 1), bezierSteps)
+  ], 1), bezierSteps, backLine2.lastFrame())
   const backLine4: FrameContext = FrameContext.generateRotationMinimizingFrames(joinBezierByTangent(backLine3.controlPoints, [
     [110, 2, 2.5],
     [123.25, 1.2, 1]
-  ]), bezierSteps)
+  ]), bezierSteps, backLine3.lastFrame())
   const backLine5: FrameContext = FrameContext.generateRotationMinimizingFrames(joinBezierByTangent(backLine4.controlPoints, [
     [endLine.controlPoints[0][0] - 18, 0, 0],
     [endLine.controlPoints[0][0] - 16, 0, 0]
-  ], 0.5), bezierSteps)
+  ], 0.5), bezierSteps, backLine4.lastFrame())
   const backLine6: FrameContext = FrameContext.generateRotationMinimizingFrames(joinBezierByTangent(backLine5.controlPoints, [
     [endLine.controlPoints[0][0] - 5, 0, endLine.controlPoints[0][2]],
     endLine.controlPoints[0]
-  ]), bezierSteps)
+  ]), bezierSteps, backLine5.lastFrame())
   const backLineContexts: FrameContext[] = [backLine1, backLine2, backLine3, backLine4, backLine5, backLine6]
 
   result.push(backLineContexts.map(frameContext => drawPoints(frameContext, params, { color: [1, 0, 0] })))
