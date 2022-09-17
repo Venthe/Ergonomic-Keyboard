@@ -50,7 +50,7 @@ export const drawPoints = (
 ): RecursiveArray<Geometry> | Geometry => {
   const result: RecursiveArray<Geometry> | Geometry = []
 
-  const frameContext = FrameContext.generateFramesForBezier(points, steps)
+  const frameContext = FrameContext.generateRotationMinimizingFrames(points, steps)
 
   result.push(colorize(color, drawPolyline(frameContext.frames.map(frame => frame.origin), params.Debug_point_base_size * 0.4)))
 

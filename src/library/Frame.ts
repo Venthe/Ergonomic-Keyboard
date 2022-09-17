@@ -7,18 +7,28 @@ export class FrameContext {
   private readonly stepSize: number
 
   constructor (readonly controlPoints: BezierControlPoints, private readonly steps: number) {
-    const firstFrame = Frame.generateFrenetFrame(0, controlPoints)
-    this.frames.push(firstFrame)
     this.stepSize = 1 / steps
-
-    for (let i = 1; i < steps + 1; i += 1) {
-      const previousFrame = this.frames[i - 1]
-      this.frames.push(previousFrame.generateNextRotationMinimizingFrame(this.stepSize, controlPoints))
-    }
   }
 
-  public static generateFramesForBezier (controlPoints: BezierControlPoints, steps: number): FrameContext {
-    return new FrameContext(controlPoints, steps)
+  public static generateRotationMinimizingFrames (controlPoints: BezierControlPoints, steps: number): FrameContext {
+    const frameContext = new FrameContext(controlPoints, steps)
+    const firstFrame = Frame.generateFrenetFrame(0, controlPoints)
+    frameContext.frames.push(firstFrame)
+
+    for (let i = 1; i < steps + 1; i += 1) {
+      const previousFrame = frameContext.frames[i - 1]
+      frameContext.frames.push(previousFrame.generateNextRotationMinimizingFrame(frameContext.stepSize, controlPoints))
+    }
+    return frameContext
+  }
+
+  public static generateFrenetFrames (controlPoints: BezierControlPoints, steps: number): FrameContext {
+    const frameContext = new FrameContext(controlPoints, steps)
+
+    for (let i = 0; i < steps; i += frameContext.stepSize) {
+      frameContext.frames.push(Frame.generateFrenetFrame(i, controlPoints))
+    }
+    return frameContext
   }
 }
 

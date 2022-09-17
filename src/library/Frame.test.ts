@@ -14,7 +14,7 @@ it('FrameContext', () => {
   ]
 
   // when
-  const frameContext = FrameContext.generateFramesForBezier(controlPoints, 1)
+  const frameContext = FrameContext.generateRotationMinimizingFrames(controlPoints, 1)
 
   // Then
   expect(frameContext.frames).toMatchCloseTo([
