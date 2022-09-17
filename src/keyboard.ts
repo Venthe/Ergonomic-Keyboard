@@ -4,7 +4,7 @@ import { mirror, translate } from '@jscad/modeling/src/operations/transforms'
 import RecursiveArray from '@jscad/modeling/src/utils/recursiveArray'
 import { Entrypoint, MainFunction, ParameterDefinitions } from './jscad'
 import { ExtendedParams, Params, Variables } from './keyboardTypes'
-import { joinBezierByTangent } from './library/bezier'
+import { BezierControlPoints, joinBezierByTangent, weightedSteps } from './library/bezier'
 import { drawPoints } from './library/draw'
 import { FrameContext } from './library/Frame'
 import { constructionLine } from './library/utilities'
@@ -151,33 +151,42 @@ function arcSurface (params: ExtendedParams): RecursiveArray<Geometry> | Geometr
 
   result.push(drawPoints(endLine, params, { color: [1, 0, 0] }))
 
-  const backLine1: FrameContext = FrameContext.generateRotationMinimizingFrames([
+  const backLine1Points: BezierControlPoints = [
     middleLine1.controlPoints[0],
     [2, 18.5, middleLine1.controlPoints[0][2]],
     [5, 18.4, middleLine1.controlPoints[0][2]],
     [8, 18, middleLine1.controlPoints[0][2]]
-  ], bezierSteps)
-  const backLine2: FrameContext = FrameContext.generateRotationMinimizingFrames(joinBezierByTangent(backLine1.controlPoints, [
+  ]
+  const backLine2Points = joinBezierByTangent(backLine1Points, [
     [35, 13, 17.5],
     [48.25, 10.5, 14]
-  ], 1), bezierSteps, backLine1.lastFrame())
-  const backLine3: FrameContext = FrameContext.generateRotationMinimizingFrames(joinBezierByTangent(backLine2.controlPoints, [
+  ], 1)
+  const backLine3Points = joinBezierByTangent(backLine2Points, [
     [75, 5.7, 8],
     [85.75, 4.5, 6]
-  ], 1), bezierSteps, backLine2.lastFrame())
-  const backLine4: FrameContext = FrameContext.generateRotationMinimizingFrames(joinBezierByTangent(backLine3.controlPoints, [
+  ], 1)
+  const backLine4Points = joinBezierByTangent(backLine3Points, [
     [110, 2, 2.5],
     [123.25, 1.2, 1]
-  ]), bezierSteps, backLine3.lastFrame())
-  const backLine5: FrameContext = FrameContext.generateRotationMinimizingFrames(joinBezierByTangent(backLine4.controlPoints, [
+  ])
+  const backLine5Points = joinBezierByTangent(backLine4Points, [
     [endLine.controlPoints[0][0] - 18, 0, 0],
     [endLine.controlPoints[0][0] - 16, 0, 0]
-  ], 0.5), bezierSteps, backLine4.lastFrame())
-  const backLine6: FrameContext = FrameContext.generateRotationMinimizingFrames(joinBezierByTangent(backLine5.controlPoints, [
+  ], 0.5)
+  const backLine6Points = joinBezierByTangent(backLine5Points, [
     [endLine.controlPoints[0][0] - 5, 0, endLine.controlPoints[0][2]],
     endLine.controlPoints[0]
-  ]), bezierSteps, backLine5.lastFrame())
-  const backLineContexts: FrameContext[] = [backLine1, backLine2, backLine3, backLine4, backLine5, backLine6]
+  ])
+
+  const weighted = weightedSteps([backLine1Points, backLine2Points, backLine3Points, backLine4Points, backLine5Points, backLine6Points], 50)
+
+  const backLine1Context: FrameContext = FrameContext.generateRotationMinimizingFrames(backLine1Points, weighted[0])
+  const backLine2Context: FrameContext = FrameContext.generateRotationMinimizingFrames(backLine2Points, weighted[1], backLine1Context.lastFrame())
+  const backLine3Context: FrameContext = FrameContext.generateRotationMinimizingFrames(backLine3Points, weighted[2], backLine2Context.lastFrame())
+  const backLine4Context: FrameContext = FrameContext.generateRotationMinimizingFrames(backLine4Points, weighted[3], backLine3Context.lastFrame())
+  const backLine5Context: FrameContext = FrameContext.generateRotationMinimizingFrames(backLine5Points, weighted[4], backLine4Context.lastFrame())
+  const backLine6Context: FrameContext = FrameContext.generateRotationMinimizingFrames(backLine6Points, weighted[5], backLine5Context.lastFrame())
+  const backLineContexts: FrameContext[] = [backLine1Context, backLine2Context, backLine3Context, backLine4Context, backLine5Context, backLine6Context]
 
   result.push(backLineContexts.map(frameContext => drawPoints(frameContext, params, { color: [1, 0, 0] })))
 

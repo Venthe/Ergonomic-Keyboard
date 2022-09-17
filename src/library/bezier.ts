@@ -59,4 +59,14 @@ export const bezierLength = (controlPoints: BezierControlPoints, steps: number =
   return length
 }
 
+export const weightedSteps = (controlPoints: BezierControlPoints[], fidelity: number = 100): number[] => {
+  const lengths = controlPoints.map(controlPoint => bezierLength(controlPoint))
+  const totalLength = lengths.reduce((acc, curr) => acc + curr, 0)
+
+  return lengths.map(length => length / totalLength)
+    .map(part => part * fidelity)
+    .map(part => Math.ceil(part))
+    .map(part => Math.max(part, 1))
+}
+
 // export function bezier_get_point_at_unit(points, distance, segments=20) = calculate_bezier_point_with_normal(distance/polyline_length(get_bezier_points(segment_bezier3(points, segments))), points);

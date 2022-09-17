@@ -51,7 +51,7 @@ export const drawPoints = (
   result.push(colorize(color, drawPolyline(frameContext.frames.map(frame => frame.origin), params.Debug_point_base_size * 0.4)))
 
   if (drawNormal) {
-    result.push(colorize([1, 0, 1], frameContext.frames.map(frame => drawLine(frame.origin, add(frame.origin, scale(frame.normal, 50)), params.Debug_point_base_size))))
+    result.push(colorize([1, 0, 1], frameContext.frames.map(frame => drawLine(frame.origin, add(frame.origin, scale(frame.normal, 50)), params.Debug_point_base_size * 0.5))))
   }
 
   if (drawTangent) {
