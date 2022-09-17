@@ -8,6 +8,7 @@ import { BezierControlPoints, joinBezierByTangent } from './library/bezier'
 import { drawContinuousPoints, drawPoints } from './library/draw'
 import { FrameContext } from './library/Frame'
 import { constructionLine } from './library/utilities'
+import { subtract } from './library/vector3'
 
 const getParameterDefinitions = (): ParameterDefinitions => [
   { name: 'keys', type: 'group', caption: 'Keys' },
@@ -130,11 +131,11 @@ function arcSurface (params: ExtendedParams): RecursiveArray<Geometry> | Geometr
     [0, middleLine2.controlPoints[3][1] + 23, 0]
   ], 0.7), bezierSteps, middleLine2.lastFrame())
 
-  result.push(
+  const middleLine = [
     drawPoints(middleLine1, params, { color: [1, 0, 0] }),
     drawPoints(middleLine2, params, { color: [0, 0, 1] }),
     drawPoints(middleLine3, params, { color: [0, 0, 1] })
-  )
+  ]
 
   const keyboardArcEnd: Vec3 = [params.Arc_width, 0, 0]
   const keyboardArcEnd2: Vec3 = [params.Arc_width, params.baseKeyboardHeight, 0]
@@ -178,17 +179,25 @@ function arcSurface (params: ExtendedParams): RecursiveArray<Geometry> | Geometr
     endLine.controlPoints[0]
   ])
 
+  const backLineFrameContexts = drawContinuousPoints([
+    backLine1Points,
+    backLine2Points,
+    backLine3Points,
+    backLine4Points,
+    backLine5Points,
+    backLine6Points
+  ],
+  { fidelity: 50 }
+  )
   result.push(
-    drawContinuousPoints([
-      backLine1Points,
-      backLine2Points,
-      backLine3Points,
-      backLine4Points,
-      backLine5Points,
-      backLine6Points
-    ],
-    { fidelity: 50 }
-    ).map(frameContext => drawPoints(frameContext, params, { color: [1, 0, 0] }))
+    backLineFrameContexts.map(frameContext => drawPoints(frameContext, params, { color: [1, 0, 0] }))
+  )
+
+  result.push(
+    backLineFrameContexts
+      .map(context => context.frames[0])
+      .map(frame => frame.origin)
+      .map(origin => translate(subtract(origin, middleLine1.controlPoints[0]), middleLine))
   )
 
   //     // points = [

@@ -40,7 +40,7 @@ export const drawPoints = (
   params: ExtendedParams,
   {
     color = [1, 1, 1],
-    drawNormal = true,
+    drawNormal = false,
     drawTangent = false,
     drawControlPoints = false,
     drawControlLine = false
