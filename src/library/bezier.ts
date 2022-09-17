@@ -2,7 +2,7 @@
 import { Vec3 } from '@jscad/modeling/src/maths/types'
 import { sphere } from '@jscad/modeling/src/primitives'
 import { colorize, RGB } from '@jscad/modeling/src/colors'
-import { scale, subtract, add } from './vector3'
+import { scale, subtract, add, distance } from './vector3'
 import { Geometry } from '@jscad/modeling/src/geometries/types'
 import RecursiveArray from '@jscad/modeling/src/utils/recursiveArray'
 
@@ -42,6 +42,21 @@ export const drawBezierControlPoints = (points: BezierControlPoints, size: numbe
     drawSphere([1, 0, 0], points[2], size * 0.6),
     drawSphere([0, 1, 0], points[3])
   ]
+}
+
+export const bezierLength = (controlPoints: BezierControlPoints, steps: number = 10): number => {
+  const generatedPoints: Vec3[] = []
+  const singleStep = 1 / steps
+  for (let i = 0; i < 1; i += singleStep) {
+    generatedPoints.push(bezier3(i, controlPoints))
+  }
+
+  let length = 0
+  for (let i = 0; i < generatedPoints.length - 1; i++) {
+    length += distance(generatedPoints[i], generatedPoints[i + 1])
+  }
+
+  return length
 }
 
 // export function bezier_get_point_at_unit(points, distance, segments=20) = calculate_bezier_point_with_normal(distance/polyline_length(get_bezier_points(segment_bezier3(points, segments))), points);

@@ -9,3 +9,4 @@ export const normalize = (v1: Vec3): Vec3 => vec3.normalize([0, 0, 0], v1)
 export const cross = (v1: Vec3, v2: Vec3): Vec3 => vec3.cross([0, 0, 0], v1, v2)
 
 export const dot = (v1: Vec3, v2: Vec3): number => vec3.dot(v1, v2)
+export const distance = vec3.distance
