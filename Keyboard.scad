@@ -120,7 +120,7 @@ reorient() {
   just_points = get_bezier_points(segment_bezier_w_normals);
   color("gray") draw_polyline(just_points, Debug_point_base_size);
   // color("red") for(p = segment_bezier_w_normals) draw_line(p[0], p[0]+(p[1]*10), Debug_point_base_size);
-  color("yellow", 0.6) draw_polyline(bezier, Debug_point_base_size);
+  // color("yellow", 0.6) draw_polyline(bezier, Debug_point_base_size);
 
   draw_bezier(bezier);
   points = [
@@ -164,7 +164,7 @@ reorient() {
   lines_for_keys = [for(p=points) bezier_get_point_at_unit(bezier, p)[0]];
   keyboard_arc_end=[Arc_width, 0,0];
   for(p = lines_for_keys) translate(p) translate(-Keyboard_arc_origin) construction_line(Keyboard_arc_origin, keyboard_arc_end);
-  mesh_cloud(lines_for_keys);
+  // mesh_cloud(lines_for_keys);
   
   // _density=3;
   // plane = [for(x=[0:_density:Arc_width]) for(z=[0:_density:_v_base_keyboard_height]) [x, z, 0]];
