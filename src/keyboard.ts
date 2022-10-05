@@ -5,8 +5,11 @@ import RecursiveArray from '@jscad/modeling/src/utils/recursiveArray'
 import { Entrypoint, MainFunction, ParameterDefinitions } from './jscad'
 import { ExtendedParams, Params, Variables } from './keyboardTypes'
 import { BezierControlPoints, joinBezierByTangent } from './library/bezier'
+import { drawSurface, generateSurface } from './library/bezierSurface'
 import { drawContinuousPoints, drawPoints } from './library/draw'
 import { FrameContext } from './library/Frame'
+import { BezierSurfaceControlPoints } from './library/surface'
+import { generateExtrudedSurface } from './library/surfaceExtrusion'
 import { constructionLine } from './library/utilities'
 import { subtract } from './library/vector3'
 
@@ -259,23 +262,35 @@ const main: MainFunction = (params: Params) => {
   const scene: RecursiveArray<Geometry> | Geometry = []
   const extendedParamsWithVariables: ExtendedParams = { ...params, ...variables(params) }
 
-  if (params.Enable_debug) { console.debug('Parameters:', extendedParamsWithVariables) }
+  // if (params.Enable_debug) { console.debug('Parameters:', extendedParamsWithVariables) }
 
-  const keyboardArc = blockKeyboardArc(extendedParamsWithVariables)
-  scene.push(
-    keyboardArc,
-    mirror({ normal: [1, 0, 0] }, keyboardArc)
-  )
+  // const keyboardArc = blockKeyboardArc(extendedParamsWithVariables)
+  // scene.push(
+  //   keyboardArc,
+  //   mirror({ normal: [1, 0, 0] }, keyboardArc)
+  // )
 
-  scene.push(
-    translate([params.Arc_width + params.Key_padding, 0, 0], blockStraight(extendedParamsWithVariables))
-  )
+  // scene.push(
+  //   translate([params.Arc_width + params.Key_padding, 0, 0], blockStraight(extendedParamsWithVariables))
+  // )
 
-  const arc = arcSurface(extendedParamsWithVariables)
-  scene.push(
-    arc,
-    mirror({ normal: [1, 0, 0] }, arc)
-  )
+  // const arc = arcSurface(extendedParamsWithVariables)
+  // scene.push(
+  //   arc,
+  //   mirror({ normal: [1, 0, 0] }, arc)
+  // )
+  const surface: BezierSurfaceControlPoints = [
+    [[0, 0, 0], [5, -5, 0], [15, -5, 0], [20, 0, 0]],
+    [[0, 5, 0], [5, 5, 5], [15, 5, 5], [20, 5, 0]],
+    [[0, 15, 0], [5, 15, 10], [15, 15, 10], [20, 15, 0]],
+    [[0, 40, 0], [5, 45, 0], [15, 45, 0], [20, 40, 0]]
+  ]
+
+  const primarySurface = generateSurface(surface, 10)
+  const extrudedSurface = generateExtrudedSurface(primarySurface, 2)
+
+  scene.push(drawSurface(extrudedSurface, { orientation: 'inward' }))
+  // scene.push(drawExtruded(sf, 10, 2))
 
   return mirror({ normal: [1, 0, 0] }, scene)
 }

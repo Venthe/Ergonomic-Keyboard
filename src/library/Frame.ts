@@ -10,15 +10,23 @@ export class FrameContext {
     this.stepSize = 1 / steps
   }
 
-  public static generateRotationMinimizingFrames (controlPoints: BezierControlPoints, steps: number, originFrame?: Frame): FrameContext {
+  public getOrigins(): Vec3[] {
+    return this.frames.map(f => f.origin)
+  }
+
+  public static generateRotationMinimizingFrames(controlPoints: BezierControlPoints, steps: number, originFrame?: Frame): FrameContext {
     const frameContext = new FrameContext(controlPoints, steps)
     const firstFrame = Frame.generateFrenetFrame(0, frameContext, originFrame)
+    firstFrame.setAsBorder()
     frameContext.frames.push(firstFrame)
 
     for (let i = 1; i < steps + 1; i += 1) {
       const previousFrame = frameContext.frames[i - 1]
       frameContext.frames.push(previousFrame.generateNextRotationMinimizingFrame())
     }
+
+    frameContext.frames[frameContext.frames.length -1].setAsBorder()
+
     return frameContext
   }
 
@@ -44,7 +52,7 @@ export class Frame {
   * @param rotationalAxis rotational axis vector
   * @param normal normal vector
   */
-  public constructor(readonly origin: Vec3, readonly tangent: Vec3, readonly rotationalAxis: Vec3, readonly normal: Vec3, readonly step: number, readonly context: FrameContext) { }
+  public constructor(readonly origin: Vec3, readonly tangent: Vec3, readonly rotationalAxis: Vec3, readonly normal: Vec3, readonly step: number, readonly context: FrameContext, private border: boolean = false) { }
 
   public generateNextRotationMinimizingFrame(): Frame {
     const nextStep: number = this.step + this.context.stepSize
@@ -134,5 +142,13 @@ export class Frame {
 
   private static frenetNormal(step: number, controlPoints: BezierControlPoints): Vec3 {
     return normalize(cross(Frame.frenetRotationalAxis(step, controlPoints), Frame.frenetTangent(step, controlPoints)))
+  }
+
+  setAsBorder() {
+    this.border = true
+  }
+
+  get isBorder() {
+    return this.border
   }
 }
