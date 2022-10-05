@@ -32,7 +32,7 @@ const getParameterDefinitions = (): ParameterDefinitions => [
 
 const variables: (params: Params) => Variables = (params) =>
   ((keySmallSize: number): Variables => ({
-  // Origin for the sketch
+    // Origin for the sketch
     origin: [0, 0, 0],
     keySmallSize,
     // _v_keyboard_wing_angle_origin=[0, Keyboard_wing_angle_origin_offset, 0];
@@ -57,7 +57,7 @@ const blockKeyboardArc = (params: ExtendedParams): RecursiveArray<Geometry> | Ge
 }
 // const draw_top_cover = (params) => { }
 
-function blockStraight (params: ExtendedParams): RecursiveArray<Geometry> | Geometry {
+function blockStraight(params: ExtendedParams): RecursiveArray<Geometry> | Geometry {
   const result: RecursiveArray<Geometry> | Geometry = []
 
   const totalArrowBlockWidth = params.Key_size * 3 + params.Key_padding * 2
@@ -86,7 +86,7 @@ function blockStraight (params: ExtendedParams): RecursiveArray<Geometry> | Geom
       constructionLine({
         start: [0, 0, 0],
         stop:
-            [totalNumpadWidth, 0, 0]
+          [totalNumpadWidth, 0, 0]
       }, params),
       constructionLine({
         start: [0, params.baseKeyboardHeight, 0],
@@ -95,12 +95,12 @@ function blockStraight (params: ExtendedParams): RecursiveArray<Geometry> | Geom
       constructionLine({
         start: [totalNumpadWidth, 0, 0],
         stop:
-            [totalNumpadWidth, params.baseKeyboardHeight, 0]
+          [totalNumpadWidth, params.baseKeyboardHeight, 0]
       }, params),
       constructionLine({
         start: [0, 0, 0],
         stop:
-        [0, params.baseKeyboardHeight, 0]
+          [0, params.baseKeyboardHeight, 0]
       }, params)
     )
   )
@@ -108,7 +108,7 @@ function blockStraight (params: ExtendedParams): RecursiveArray<Geometry> | Geom
   return result
 }
 
-function arcSurface (params: ExtendedParams): RecursiveArray<Geometry> | Geometry {
+function arcSurface(params: ExtendedParams): RecursiveArray<Geometry> | Geometry {
   const result: RecursiveArray<Geometry> | Geometry = []
 
   const bezierSteps = 10
@@ -186,8 +186,7 @@ function arcSurface (params: ExtendedParams): RecursiveArray<Geometry> | Geometr
     backLine4Points,
     backLine5Points,
     backLine6Points
-  ],
-  { fidelity: 50 }
+  ], { fidelity: 50 }
   )
   result.push(
     backLineFrameContexts.map(frameContext => drawPoints(frameContext, params, { color: [1, 0, 0] }))

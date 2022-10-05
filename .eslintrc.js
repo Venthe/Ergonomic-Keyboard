@@ -12,5 +12,8 @@ module.exports = {
     project: ['./tsconfig.json'] // Specify it only for TypeScript files
   },
   rules: {
+    'space-before-function-paren': 'off',
+    '@typescript-eslint/space-before-function-paren': ['error', 'never'],
+    '@typescript-eslint/no-unused-vars': 'warn'
   }
 }

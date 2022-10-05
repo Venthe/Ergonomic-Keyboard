@@ -10,7 +10,7 @@ import * as vec3 from '@jscad/modeling/src/maths/vec3'
 import { range } from './collections'
 import { colorize } from '@jscad/modeling/src/colors'
 
-export function constructionLine ({ start, stop, label }: { start: Vec3, stop: Vec3, label?: string }, params: ExtendedParams): RecursiveArray<Geometry> | Geometry {
+export function constructionLine({ start, stop, label }: { start: Vec3, stop: Vec3, label?: string }, params: ExtendedParams): RecursiveArray<Geometry> | Geometry {
   if (!params.Enable_debug) {
     return []
   }

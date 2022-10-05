@@ -6,7 +6,7 @@ export class FrameContext {
   readonly frames: Frame[] = []
   readonly stepSize: number
 
-  constructor (readonly controlPoints: BezierControlPoints, readonly steps: number) {
+  constructor(readonly controlPoints: BezierControlPoints, readonly steps: number) {
     this.stepSize = 1 / steps
   }
 
@@ -22,7 +22,7 @@ export class FrameContext {
     return frameContext
   }
 
-  public static generateFrenetFrames (controlPoints: BezierControlPoints, steps: number): FrameContext {
+  public static generateFrenetFrames(controlPoints: BezierControlPoints, steps: number): FrameContext {
     const frameContext = new FrameContext(controlPoints, steps)
 
     for (let i = 0; i < steps; i += frameContext.stepSize) {
@@ -31,7 +31,7 @@ export class FrameContext {
     return frameContext
   }
 
-  lastFrame (): Frame {
+  lastFrame(): Frame {
     return this.frames[this.frames.length - 1]
   }
 }
@@ -44,9 +44,9 @@ export class Frame {
   * @param rotationalAxis rotational axis vector
   * @param normal normal vector
   */
-  public constructor (readonly origin: Vec3, readonly tangent: Vec3, readonly rotationalAxis: Vec3, readonly normal: Vec3, readonly step: number, readonly context: FrameContext) { }
+  public constructor(readonly origin: Vec3, readonly tangent: Vec3, readonly rotationalAxis: Vec3, readonly normal: Vec3, readonly step: number, readonly context: FrameContext) { }
 
-  public generateNextRotationMinimizingFrame (): Frame {
+  public generateNextRotationMinimizingFrame(): Frame {
     const nextStep: number = this.step + this.context.stepSize
     const newFrameOrigin: Vec3 = bezier3(nextStep, this.context.controlPoints)
     const newFrameTangent: Vec3 = Frame.frenetTangent(nextStep, this.context.controlPoints)
@@ -71,7 +71,7 @@ export class Frame {
     )
   }
 
-  public static generateFrenetFrame (step: number, context: FrameContext, originFrame?: Frame): Frame {
+  public static generateFrenetFrame(step: number, context: FrameContext, originFrame?: Frame): Frame {
     const origin = bezier3(step, context.controlPoints)
     const tangent = Frame.frenetTangent(step, context.controlPoints)
     const rotationalAxis = originFrame?.rotationalAxis ?? Frame.frenetRotationalAxis(step, context.controlPoints)
@@ -86,7 +86,7 @@ export class Frame {
     * + 3 * cP[2] * (2 - 3 * step) * step
     * + 3 * cP[3] * step ^ 2
     */
-  private static firstDerivative (step: number, controlPoints: BezierControlPoints): Vec3 {
+  private static firstDerivative(step: number, controlPoints: BezierControlPoints): Vec3 {
     return add(
       add(
         add(
@@ -105,7 +105,7 @@ export class Frame {
     * + 6 * cP[2] * (1 - 3 * step)
     * + 6 * cP[3] * step
     */
-  private static secondDerivative (step: number, controlPoints: BezierControlPoints): Vec3 {
+  private static secondDerivative(step: number, controlPoints: BezierControlPoints): Vec3 {
     return add(
       add(
         add(
@@ -118,21 +118,21 @@ export class Frame {
     )
   }
 
-  private static frenetTangent (step: number, controlPoints: BezierControlPoints): Vec3 {
+  private static frenetTangent(step: number, controlPoints: BezierControlPoints): Vec3 {
     return normalize(Frame.firstDerivative(step, controlPoints))
   }
 
-  private static frenetB (step: number, controlPoints: BezierControlPoints): Vec3 {
+  private static frenetB(step: number, controlPoints: BezierControlPoints): Vec3 {
     const tangent = Frame.frenetTangent(step, controlPoints)
     const secondDerivative = Frame.secondDerivative(step, controlPoints)
     return normalize(add(tangent, secondDerivative))
   }
 
-  private static frenetRotationalAxis (step: number, controlPoints: BezierControlPoints): Vec3 {
+  private static frenetRotationalAxis(step: number, controlPoints: BezierControlPoints): Vec3 {
     return normalize(cross(Frame.frenetTangent(step, controlPoints), Frame.frenetB(step, controlPoints)))
   }
 
-  private static frenetNormal (step: number, controlPoints: BezierControlPoints): Vec3 {
+  private static frenetNormal(step: number, controlPoints: BezierControlPoints): Vec3 {
     return normalize(cross(Frame.frenetRotationalAxis(step, controlPoints), Frame.frenetTangent(step, controlPoints)))
   }
 }
