@@ -1,4 +1,5 @@
 import { Vec3 } from '@jscad/modeling/src/maths/types'
+import RecursiveArray from '@jscad/modeling/src/utils/recursiveArray'
 
 export interface Params {
   Key_padding: number
@@ -23,3 +24,5 @@ export interface Variables {
 }
 
 export type ExtendedParams = Params & Variables
+
+export type WithAdditionalGeometry<T> = T & {additionalGeometry: Geom3 | RecursiveArray<Geom3>}

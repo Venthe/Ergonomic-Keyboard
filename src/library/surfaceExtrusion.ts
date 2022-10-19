@@ -2,7 +2,7 @@ import { colorize } from '@jscad/modeling/src/colors'
 import { Vec3 } from '@jscad/modeling/src/maths/vec3'
 import { circle, sphere } from '@jscad/modeling/src/primitives'
 import { json } from 'stream/consumers'
-import { FaceIndices, Surface, SurfacePoint } from './surface'
+import { WithAdditionalGeometry } from '../keyboardTypes'
 import { add, normalize, scale } from './vector3'
 
 export interface ExtrudedPointData extends SurfacePoint {
@@ -26,10 +26,10 @@ const extrudeSurface = (originalSurface: Surface<SurfacePoint>, extrusionSize: n
   }
 }
 
-export const generateExtrudedSurface = (originalSurface: Surface<SurfacePoint>, extrusion: number): { surface: Surface<SurfacePoint | ExtrudedPointData>, ext: any } =>
-  concatSurface(originalSurface, extrudeSurface(originalSurface, extrusion))
+export const extrudeSurface = (originalSurface: Surface<SurfacePoint>, extrusion: number): WithAdditionalGeometry<Surface<SurfacePoint | ExtrudedPointData>> =>
+  concatSurface(originalSurface, _extrudeSurface(originalSurface, extrusion))
 
-const concatSurface = (originalSurface: Surface<SurfacePoint>, extrudedSurface: Surface<ExtrudedPointData>): { surface: Surface<SurfacePoint | ExtrudedPointData>, ext: any } => {
+const concatSurface = (originalSurface: Surface<SurfacePoint>, extrudedSurface: Surface<ExtrudedPointData>): WithAdditionalGeometry<Surface<SurfacePoint | ExtrudedPointData>> => {
 
   const concatenatedPoints = concatPoints(originalSurface.points, extrudedSurface.points)
     .map(pointWithIndex)
@@ -67,10 +67,9 @@ const concatSurface = (originalSurface: Surface<SurfacePoint>, extrudedSurface: 
   }
 
   return {
-    surface: {
-      points: concatenatedPoints,
-      faces: faces.concat(borderFaces)
-    }, ext: []
+    points: concatenatedPoints,
+    faces: faces.concat(borderFaces),
+    additionalGeometry: []
   }
 }
 

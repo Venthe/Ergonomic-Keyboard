@@ -10,6 +10,7 @@ import { polyhedron, sphere } from '@jscad/modeling/src/primitives'
 import { BezierSurfaceControlPoints, FaceIndices, Surface, SurfacePoint } from './surface'
 import { translate } from '@jscad/modeling/src/operations/transforms'
 import { drawLine } from './draw'
+import { WithAdditionalGeometry } from '../keyboardTypes'
 
 interface QuadFace {
   faces: QuadIndices
@@ -80,7 +81,7 @@ function generateQuadFaces(contextsForGeneratedLines: FrameContext[], pointsPerC
 export const generateSurface = (
   surfaceControlPoints: BezierSurfaceControlPoints,
   surfaceFidelity: number = 10
-): Surface<SurfacePoint> => {
+): WithAdditionalGeometry<Surface<SurfacePoint>> => {
   const contextsForOriginalControlPoints: FrameContext[] = getFramesForOriginalControlPoints(surfaceControlPoints, surfaceFidelity)
   const pointsPerContext = calculatePointsPerContext(contextsForOriginalControlPoints)
   const contextsForGeneratedLines = generateIntermediateFrames(contextsForOriginalControlPoints, surfaceFidelity)
@@ -94,7 +95,8 @@ export const generateSurface = (
       // FIXME: isEdge
       isEdge: f.isBorder
     })),
-    faces: quadFaces.map(f => f.faces).flat()
+    faces: quadFaces.map(f => f.faces).flat(),
+    additionalGeometry: []
   }
 }
 
