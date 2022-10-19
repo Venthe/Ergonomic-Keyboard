@@ -56,6 +56,7 @@ function calculateNormals(quadFaces: QuadFace[]): { [key: string]: { normal: Vec
   }, {}))
     .map(([k, v]) => ({
       origin: v.origin,
+      // TODO: calculate normal for the corner point to point more inward
       normal: average(v.normals)
     }))
     .reduce<{ [key: string]: { normal: Vec3 } }>((a, v) => {
@@ -124,7 +125,7 @@ export function drawSurface(
     result.push(normals)
   }
 
-  if (options?.drawBorder || true) {
+  if (options?.drawBorder) {
     result.push(surfaceData.points.filter(p => p.isEdge).map(p => sphere({
       center: p.origin,
       radius: 0.2
@@ -147,7 +148,7 @@ const generateIntermediateFrames = (contextsForOriginalControlPoints: FrameConte
   const controlPointsForGeneratedLines: BezierControlPoints[] = range(calculatePointsPerContext(contextsForOriginalControlPoints)).map(p => [originForFrameInContexts(0, p), originForFrameInContexts(1, p), originForFrameInContexts(2, p), originForFrameInContexts(3, p)])
   let frameContexts = controlPointsForGeneratedLines.map(controlPointsForGeneratedLine => FrameContext.generateRotationMinimizingFrames(controlPointsForGeneratedLine, surfaceFidelity))
   frameContexts[0].frames.forEach(f => f.setAsBorder())
-  frameContexts[frameContexts.length -1].frames.forEach(f => f.setAsBorder())
+  frameContexts[frameContexts.length - 1].frames.forEach(f => f.setAsBorder())
   return frameContexts
 }
 
@@ -169,6 +170,8 @@ const generateQuadIndices = (rowOffset: number, colOffset: number, pointsPerCont
   const v2Idx: number = secondInLine + ppx
   const v3Idx: number = firstInLine + ppx2
   const v4Idx: number = secondInLine + ppx2
+
+  // TODO: Orient quad according to the distance between points
 
   // const v1 = allOrigins[v1Idx]
   // const v2 = allOrigins[v2Idx]
