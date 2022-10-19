@@ -286,12 +286,8 @@ const main: MainFunction = (params: Params) => {
     [[-10, 40, 0], [5, 45, 0], [15, 45, 0], [20, 40, 0]]
   ]
 
-  const primarySurface = generateSurface(surface, 10)
-  const extrudedSurface = generateExtrudedSurface(primarySurface, 0.2)
-
-  scene.push(drawSurface(extrudedSurface.surface, { orientation: 'inward' }))
-  scene.push(extrudedSurface.ext)
-  // scene.push(drawExtruded(sf, 10, 2))
+  const geometry = generateExtrudedSurface(surface, 10, 0.2)
+  scene.push(drawSurface(geometry, { orientation: 'inward' }))
 
   return mirror({ normal: [1, 0, 0] }, scene)
 }

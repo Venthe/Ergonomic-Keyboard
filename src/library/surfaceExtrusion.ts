@@ -3,6 +3,8 @@ import { Vec3 } from '@jscad/modeling/src/maths/vec3'
 import { circle, sphere } from '@jscad/modeling/src/primitives'
 import { json } from 'stream/consumers'
 import { WithAdditionalGeometry } from '../keyboardTypes'
+import { generateSurface } from './bezierSurface'
+import { BezierSurfaceControlPoints, FaceIndices, Surface, SurfacePoint } from './surface'
 import { add, normalize, scale } from './vector3'
 
 export interface ExtrudedPointData extends SurfacePoint {
@@ -11,7 +13,7 @@ export interface ExtrudedPointData extends SurfacePoint {
 
 type WithData = (ExtrudedPointData & { index: number, faces: FaceIndices[] })
 
-const extrudeSurface = (originalSurface: Surface<SurfacePoint>, extrusionSize: number): Surface<SurfacePoint & ExtrudedPointData> => {
+const _extrudeSurface = (originalSurface: Surface<SurfacePoint>, extrusionSize: number): Surface<SurfacePoint & ExtrudedPointData> => {
   const moveOriginByExtrusionSize = (point: Vec3, direction: Vec3): Vec3 =>
     add(point, scale(normalize(direction), extrusionSize))
 
@@ -35,9 +37,7 @@ const concatSurface = (originalSurface: Surface<SurfacePoint>, extrudedSurface: 
     .map(pointWithIndex)
   const faces = concatExtrudedFaces(originalSurface, extrudedSurface)
 
-  function facesForIndex(p: (SurfacePoint | ExtrudedPointData) & { index: number }): FaceIndices[] {
-    return faces.filter(f => p.index === f[0] || p.index === f[1] || p.index === f[2])
-  }
+  const facesForIndex = (p: (SurfacePoint | ExtrudedPointData) & { index: number }): FaceIndices[] => faces.filter(f => f.includes(p.index))
 
   const extrudedEdgePoints: WithData[] = concatenatedPoints
     .map(pointWithIndex)
@@ -142,3 +142,13 @@ const invertFace = (face: number[]): [number, number, number] => [face[2], face[
 const pointWithIndex = (v: ExtrudedPointData | SurfacePoint, i: number): (ExtrudedPointData | SurfacePoint) & { index: number } => ({ ...v, index: i })
 const hasEdge = (vertex: ExtrudedPointData | SurfacePoint): boolean => vertex.isEdge
 const isExtrudedPoint = (v: ExtrudedPointData | SurfacePoint): boolean => !((v as ExtrudedPointData & SurfacePoint).originalPointIndex === undefined)
+
+export const generateExtrudedSurface = (
+  surfaceControlPoints: BezierSurfaceControlPoints,
+  surfaceFidelity: number = 10,
+  extrusion: number
+): WithAdditionalGeometry<Surface<SurfacePoint>> => {
+  const primarySurface = generateSurface(surfaceControlPoints, surfaceFidelity)
+  const extrudedSurface = extrudeSurface(primarySurface, extrusion)
+  return extrudedSurface;
+}
