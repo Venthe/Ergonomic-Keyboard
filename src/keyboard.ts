@@ -281,13 +281,13 @@ const main: MainFunction = (params: Params) => {
   // )
   const surface: BezierSurfaceControlPoints = [
     [[0, 0, 0], [5, -5, 0], [15, -5, 0], [20, 0, 0]],
-    [[0, 5, 0], [5, 5, 5], [15, 5, 5], [20, 5, 0]],
-    [[0, 15, 0], [5, 15, 10], [15, 15, 10], [20, 15, 0]],
-    [[0, 40, 0], [5, 45, 0], [15, 45, 0], [20, 40, 0]]
+    [[0, 5, 0], [5, 5, 5], [15, 5, -15], [20, 5, 0]],
+    [[0, 15, 0], [5, 15, -10], [15, 15, 10], [20, 15, 0]],
+    [[-10, 40, 0], [5, 45, 0], [15, 45, 0], [20, 40, 0]]
   ]
 
   const primarySurface = generateSurface(surface, 10)
-  const extrudedSurface = generateExtrudedSurface(primarySurface, 2)
+  const extrudedSurface = generateExtrudedSurface(primarySurface, 0.2)
 
   scene.push(drawSurface(extrudedSurface.surface, { orientation: 'inward' }))
   scene.push(extrudedSurface.ext)
