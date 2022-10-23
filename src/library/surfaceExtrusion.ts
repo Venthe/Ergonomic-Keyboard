@@ -12,26 +12,28 @@ export interface ExtrudedPointData extends SurfacePoint {
 }
 
 type WithData = (ExtrudedPointData & { index: number, faces: FaceIndices[] })
+export const moveOriginByExtrusionSize = (point: Vec3, direction: Vec3, size: number): Vec3 =>
+  add(point, scale(normalize(direction), size))
 
-const _extrudeSurface = (originalSurface: Surface<SurfacePoint>, extrusionSize: number): Surface<SurfacePoint & ExtrudedPointData> => {
-  const moveOriginByExtrusionSize = (point: Vec3, direction: Vec3): Vec3 =>
-    add(point, scale(normalize(direction), extrusionSize))
+export const _extrudeSurface = (originalSurface: WithAdditionalGeometry<Surface<SurfacePoint>>, extrusionSize: number): WithAdditionalGeometry<Surface<SurfacePoint & ExtrudedPointData>> => {
 
-  return {
+  const result = {
     faces: originalSurface.faces,
     points: originalSurface.points.map<ExtrudedPointData>((originalPoint, originalPointIndex) => ({
       normal: originalPoint.normal,
-      origin: moveOriginByExtrusionSize(originalPoint.origin, originalPoint.normal),
+      origin: moveOriginByExtrusionSize(originalPoint.origin, originalPoint.normal, extrusionSize),
       originalPointIndex: originalPointIndex,
       isEdge: originalPoint.isEdge
-    }))
+    })),
+    additionalGeometry: originalSurface.additionalGeometry
   }
+  return result
 }
 
-export const extrudeSurface = (originalSurface: Surface<SurfacePoint>, extrusion: number): WithAdditionalGeometry<Surface<SurfacePoint | ExtrudedPointData>> =>
+export const extrudeSurface = (originalSurface: WithAdditionalGeometry<Surface<SurfacePoint>>, extrusion: number): WithAdditionalGeometry<Surface<SurfacePoint | ExtrudedPointData>> =>
   concatSurface(originalSurface, _extrudeSurface(originalSurface, extrusion))
 
-const concatSurface = (originalSurface: Surface<SurfacePoint>, extrudedSurface: Surface<ExtrudedPointData>): WithAdditionalGeometry<Surface<SurfacePoint | ExtrudedPointData>> => {
+const concatSurface = (originalSurface: WithAdditionalGeometry<Surface<SurfacePoint>>, extrudedSurface: Surface<ExtrudedPointData>): WithAdditionalGeometry<Surface<SurfacePoint | ExtrudedPointData>> => {
 
   const concatenatedPoints = concatPoints(originalSurface.points, extrudedSurface.points)
     .map(pointWithIndex)
@@ -69,7 +71,7 @@ const concatSurface = (originalSurface: Surface<SurfacePoint>, extrudedSurface: 
   return {
     points: concatenatedPoints,
     faces: faces.concat(borderFaces),
-    additionalGeometry: []
+    additionalGeometry: [].concat(originalSurface.additionalGeometry)
   }
 }
 
@@ -145,10 +147,17 @@ const isExtrudedPoint = (v: ExtrudedPointData | SurfacePoint): boolean => !((v a
 
 export const generateExtrudedSurface = (
   surfaceControlPoints: BezierSurfaceControlPoints,
-  surfaceFidelity: number = 10,
-  extrusion: number
+  extrusion: number | [number, number],
+  {
+    surfaceFidelity = 10,
+    trim = [0, 0, 0, 0]
+  }: { surfaceFidelity?: number, trim?: [number, number, number, number] } = {}
 ): WithAdditionalGeometry<Surface<SurfacePoint>> => {
-  const primarySurface = generateSurface(surfaceControlPoints, surfaceFidelity)
-  const extrudedSurface = extrudeSurface(primarySurface, extrusion)
+  const isExtrusionOneWay: boolean = !Array.isArray(extrusion)
+  const extrudeDown: number = -1 * (isExtrusionOneWay ? (extrusion as number) / 2 : ((extrusion as [number, number])[0]))
+  const extrudeUp: number = (isExtrusionOneWay ? (extrusion as number) : (extrusion as [number, number])[1] + ((extrusion as [number, number])[0]))
+
+  const primarySurface = generateSurface(surfaceControlPoints, { surfaceFidelity, trim, extrude: extrudeDown })
+  const extrudedSurface = extrudeSurface(primarySurface, extrudeUp)
   return extrudedSurface;
 }

@@ -5,6 +5,7 @@ import { colorize, RGB } from '@jscad/modeling/src/colors'
 import { scale, subtract, add, distance } from './vector3'
 import { Geometry } from '@jscad/modeling/src/geometries/types'
 import RecursiveArray from '@jscad/modeling/src/utils/recursiveArray'
+import { ByteLengthQueuingStrategy } from 'stream/web'
 
 export type BezierControlPoints = [Vec3, Vec3, Vec3, Vec3]
 
@@ -44,29 +45,106 @@ export const drawBezierControlPoints = (points: BezierControlPoints, size: numbe
   ]
 }
 
+const numberSum: (a: number, b: number) => number = (a, b) => a + b
+
 export const bezierLength = (controlPoints: BezierControlPoints, steps: number = 10): number => {
-  const generatedPoints: Vec3[] = []
-  const singleStep = 1 / steps
-  for (let i = 0; i < 1; i += singleStep) {
-    generatedPoints.push(bezier3(i, controlPoints))
-  }
+  const generatedPoints = generatePointsForCurve(steps, controlPoints)
+  const length = generateLengthsForCurvePoints(generatedPoints)
 
-  let length = 0
-  for (let i = 0; i < generatedPoints.length - 1; i++) {
-    length += distance(generatedPoints[i], generatedPoints[i + 1])
-  }
-
-  return length
+  return length.map(a => a.distance).reduce(numberSum, 0)
 }
 
 export const weightedSteps = (controlPoints: BezierControlPoints[], fidelity: number = 100): number[] => {
   const lengths = controlPoints.map(controlPoint => bezierLength(controlPoint))
-  const totalLength = lengths.reduce((acc, curr) => acc + curr, 0)
+  const totalLength = lengths.reduce(numberSum, 0)
 
   return lengths.map(length => length / totalLength)
     .map(part => part * fidelity)
     .map(part => Math.ceil(part))
     .map(part => Math.max(part, 1))
+}
+
+export const mapCurveTrimToStepValues = (
+  controlPoints: BezierControlPoints,
+  {
+    fidelity = 100,
+    trim = [0, 0]
+  }: { fidelity?: number, trim?: [number, number] } = {}
+): [number, number] => {
+  const generatedPoints = generatePointsForCurve(fidelity, controlPoints)
+  const lengths = generateLengthsForCurvePoints(generatedPoints)
+
+  const totalLength = bezierLength(controlPoints, fidelity)
+  // console.log(totalLength, trim)
+  const trim2 = [...trim]
+  if (trim2[0] < 0)
+    trim2[0] = totalLength + trim2[0]
+  if (trim[1] < 0)
+    trim2[1] = totalLength + trim2[1]
+
+  const result: [number, number] = [
+    trim2[0] === 0 ? 0 : getStepForTrim(trim2[0], lengths),
+    trim2[1] === 0 ? 1 : getStepForTrim(trim2[1], lengths)
+  ]
+
+  if (result[0] > result[1])
+    throw new Error("Cannot trim so that start is further than a finish")
+
+  return result
+}
+
+export function getStepForTrim(trim: number, lengths: { distance: number, cumulativeDistance: number, steps: [number, number] }[]): number {
+  const pickedElements = lengths
+    .sort((a, b) => (a.cumulativeDistance > b.cumulativeDistance) ? 1 : -1)
+    .filter(l => l.cumulativeDistance >= trim)
+    .filter(l => (l.cumulativeDistance - l.distance) <= trim)
+  const trimSegment = pickedElements[pickedElements.length - 1]
+  if (trimSegment === undefined)
+    throw new Error(`${trim}, ${JSON.stringify(lengths[lengths.length - 1])}, ${lengths.map(a => a.distance).reduce((a, b) => a + b, 0)}`)
+  // console.log(
+  //   lengths,
+  //   lengths.length,
+  //   trim,
+  //   lengths
+  //     .sort((a, b) => (a.cumulativeDistance > b.cumulativeDistance) ? 1 : -1)
+  //     .filter(l => l.cumulativeDistance >= trim)
+  //     .filter(l => (l.cumulativeDistance - l.distance) <= trim)
+  // )
+  const startDistance = trimSegment.cumulativeDistance - trimSegment.distance
+  const stepScale = (trim - startDistance) / (trimSegment.distance)
+  const result = (trimSegment.steps[0] + ((trimSegment.steps[1] - trimSegment.steps[0]) * stepScale))
+  return result
+}
+
+function generatePointsForCurve(steps: number, controlPoints: BezierControlPoints) {
+  const generatedPoints: { point: Vec3, step: number }[] = []
+  const singleStep = 1 / steps
+  for (let i = 0; i <= 1; i += singleStep) {
+    generatedPoints.push({ point: bezier3(i, controlPoints), step: i })
+  }
+
+  return generatedPoints
+}
+
+function generateLengthsForCurvePoints(generatedPoints: { point: Vec3, step: number }[]): { distance: number, cumulativeDistance: number, steps: [number, number] }[] {
+  const length: { distance: number, steps: [number, number], cumulativeDistance: number }[] = []
+  let cumulativeDistance = 0
+  for (let i = 0; i < generatedPoints.length - 1; i++) {
+    const d: number = distance(generatedPoints[i].point, generatedPoints[i + 1].point)
+    const s: [number, number] = [generatedPoints[i].step, generatedPoints[i + 1].step]
+    cumulativeDistance += d
+    length.push(
+      {
+        distance: d,
+        steps: s,
+        cumulativeDistance: cumulativeDistance
+      }
+    )
+  }
+
+  // console.log(cumulativeDistance, length.reduce((a, b) => a + b.distance, 0))
+
+  return length
 }
 
 // export function bezier_get_point_at_unit(points, distance, segments=20) = calculate_bezier_point_with_normal(distance/polyline_length(get_bezier_points(segment_bezier3(points, segments))), points);

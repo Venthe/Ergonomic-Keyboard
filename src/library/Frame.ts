@@ -1,31 +1,47 @@
 import { Vec3 } from '@jscad/modeling/src/maths/types'
-import { scale, subtract, add, dot, cross, normalize } from './vector3'
-import { BezierControlPoints, bezier3 } from './bezier'
+import { scale, subtract, add, dot, cross, normalize, distance } from './vector3'
+import { BezierControlPoints, bezier3, bezierLength, mapCurveTrimToStepValues } from './bezier'
 
 export class FrameContext {
   readonly frames: Frame[] = []
   readonly stepSize: number
 
-  constructor(readonly controlPoints: BezierControlPoints, readonly steps: number) {
-    this.stepSize = 1 / steps
+  constructor(readonly controlPoints: BezierControlPoints, readonly steps: number, stepSize?: number) {
+    this.stepSize = stepSize || 1 / steps
   }
 
   public getOrigins(): Vec3[] {
     return this.frames.map(f => f.origin)
   }
 
-  public static generateRotationMinimizingFrames(controlPoints: BezierControlPoints, steps: number, originFrame?: Frame): FrameContext {
-    const frameContext = new FrameContext(controlPoints, steps)
-    const firstFrame = Frame.generateFrenetFrame(0, frameContext, originFrame)
+  public static generateRotationMinimizingFrames(
+    controlPoints: BezierControlPoints,
+    steps: number,
+    originFrame: Frame | undefined = undefined,
+    {
+      trim = [0, 0]
+    }: { trim?: [number, number] } = {}
+  ): FrameContext {
+
+    const c = mapCurveTrimToStepValues(controlPoints, { trim, fidelity: 500 })
+    const start = c[0]
+    const stop = c[1]
+
+    const frameContext = new FrameContext(controlPoints, steps, (stop - start) / steps)
+
+    const firstFrame = Frame.generateFrenetFrame(start, frameContext, originFrame)
     firstFrame.setAsBorder()
     frameContext.frames.push(firstFrame)
 
-    for (let i = 1; i < steps + 1; i += 1) {
-      const previousFrame = frameContext.frames[i - 1]
+    for (let i = 1; i <= steps; i += 1) {
+      // console.log(i, frameContext.stepSize, start, stop)
+      const previousFrame = frameContext.frames[frameContext.frames.length - 1]
       frameContext.frames.push(previousFrame.generateNextRotationMinimizingFrame())
     }
 
-    frameContext.frames[frameContext.frames.length -1].setAsBorder()
+    frameContext.frames[frameContext.frames.length - 1].setAsBorder()
+
+    // console.log(frameContext.frames.length)
 
     return frameContext
   }

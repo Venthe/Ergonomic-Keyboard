@@ -1,17 +1,18 @@
-import { Geometry } from '@jscad/modeling/src/geometries/types'
+import { Geom3, Geometry } from '@jscad/modeling/src/geometries/types'
 import { Vec3 } from '@jscad/modeling/src/maths/vec3'
+import { subtract } from '@jscad/modeling/src/operations/booleans'
 import { mirror, rotate, translate } from '@jscad/modeling/src/operations/transforms'
 import RecursiveArray from '@jscad/modeling/src/utils/recursiveArray'
 import { Entrypoint, MainFunction, ParameterDefinitions } from './jscad'
 import { ExtendedParams, Params, Variables } from './keyboardTypes'
 import { BezierControlPoints, joinBezierByTangent } from './library/bezier'
-import { drawSurface, generateSurface } from './library/bezierSurface'
+import { drawSurface } from './library/bezierSurface'
 import { drawContinuousPoints, drawPoints } from './library/draw'
 import { FrameContext } from './library/Frame'
 import { BezierSurfaceControlPoints } from './library/surface'
 import { generateExtrudedSurface } from './library/surfaceExtrusion'
 import { constructionLine } from './library/utilities'
-import { subtract } from './library/vector3'
+import * as vector3 from './library/vector3'
 
 const getParameterDefinitions = (): ParameterDefinitions => [
   { name: 'keys', type: 'group', caption: 'Keys' },
@@ -137,7 +138,7 @@ function arcSurface(params: ExtendedParams): RecursiveArray<Geometry> | Geometry
   const middleLine = [
     drawPoints(middleLine1, params, { color: [1, 0, 0] }),
     drawPoints(middleLine2, params, { color: [0, 0, 1] }),
-    drawPoints(middleLine3, params, { color: [0, 0, 1] })
+    drawPoints(middleLine3, params, { color: [0, 1, 1] })
   ]
 
   const keyboardArcEnd: Vec3 = [params.Arc_width, 0, 0]
@@ -153,7 +154,7 @@ function arcSurface(params: ExtendedParams): RecursiveArray<Geometry> | Geometry
     keyboardArcEnd2
   ], bezierSteps)
 
-  result.push(drawPoints(endLine, params, { color: [1, 0, 0] }))
+  result.push(drawPoints(endLine, params, { color: [1, 1, 0] }))
 
   const backLine1Points: BezierControlPoints = [
     middleLine1.controlPoints[0],
@@ -192,19 +193,21 @@ function arcSurface(params: ExtendedParams): RecursiveArray<Geometry> | Geometry
   ], { fidelity: 50 }
   )
   result.push(
-    backLineFrameContexts.map(frameContext => drawPoints(frameContext, params, { color: [1, 0, 0] }))
+    backLineFrameContexts.map((frameContext, idx) => drawPoints(frameContext, params, { color: [1 - (idx / (backLineFrameContexts.length - 1)), 1 * (idx / (backLineFrameContexts.length - 1)), 1 - 1 * (idx / (backLineFrameContexts.length - 1))] }))
   )
 
-  result.push(
-    backLineFrameContexts
-      .map(context => context.frames[0])
-      .map(frame => {
-        const ml1 = translate(subtract([0, 0, 0], middleLine1.controlPoints[0]), middleLine)
-        const ml2 = rotate(frame.normal, ml1)
+  result.push(middleLine)
 
-        return translate(frame.origin, ml2)
-      })
-  )
+  // result.push(
+  //   backLineFrameContexts
+  //     .map(context => context.frames[0])
+  //     .map(frame => {
+  //       const ml1 = translate(vector3.subtract([0, 0, 0], middleLine1.controlPoints[0]), middleLine)
+  //       const ml2 = rotate(frame.normal, ml1)
+
+  //       return translate(frame.origin, ml2)
+  //     })
+  // )
 
   //     // points = [
   //     //   Keyboard_offset,
@@ -262,7 +265,7 @@ const main: MainFunction = (params: Params) => {
   const scene: RecursiveArray<Geometry> | Geometry = []
   const extendedParamsWithVariables: ExtendedParams = { ...params, ...variables(params) }
 
-  // if (params.Enable_debug) { console.debug('Parameters:', extendedParamsWithVariables) }
+  if (params.Enable_debug) { console.debug('Parameters:', extendedParamsWithVariables) }
 
   // const keyboardArc = blockKeyboardArc(extendedParamsWithVariables)
   // scene.push(
@@ -270,24 +273,39 @@ const main: MainFunction = (params: Params) => {
   //   mirror({ normal: [1, 0, 0] }, keyboardArc)
   // )
 
-  // scene.push(
-  //   translate([params.Arc_width + params.Key_padding, 0, 0], blockStraight(extendedParamsWithVariables))
-  // )
+  scene.push(
+    translate([params.Arc_width + params.Key_padding, 0, 0], blockStraight(extendedParamsWithVariables))
+  )
 
-  // const arc = arcSurface(extendedParamsWithVariables)
-  // scene.push(
-  //   arc,
-  //   mirror({ normal: [1, 0, 0] }, arc)
-  // )
+  const arc = arcSurface(extendedParamsWithVariables)
+  scene.push(
+    arc,
+    mirror({ normal: [1, 0, 0] }, arc)
+  )
+  // TODO: Add join by tangent surface
+  //  Target support: 5x3 patches
   const surface: BezierSurfaceControlPoints = [
     [[0, 0, 0], [5, -5, 0], [15, -5, 0], [20, 0, 0]],
     [[0, 5, 0], [5, 5, 5], [15, 5, -15], [20, 5, 0]],
     [[0, 15, 0], [5, 15, -10], [15, 15, 10], [20, 15, 0]],
     [[-10, 40, 0], [5, 45, 0], [15, 45, 0], [20, 40, 0]]
   ]
+  // TODO: positive second trim is problematic..., as second trim cannot be absolute.
+  //  Suggestion: take a point on starting line on the trim point, take a normal oriented to the next line - the point where crossing occurs, will give us the new trim point
+  //  This should be done by "trim a b c d should be normal based"
+  const geometry = generateExtrudedSurface(surface, 0.2, { trim: [0, 0, 0, 0], surfaceFidelity: 20 })
+  const geometry2 = generateExtrudedSurface(surface, [1, 1], { trim: [0.25, 1.75, 0.25, -0.25], surfaceFidelity: 20 })
+  const geometry3 = generateExtrudedSurface(surface, [1, 1], { trim: [2, 4, 3, 15], surfaceFidelity: 20 })
+  const geometry4 = generateExtrudedSurface(surface, [1, 1], { trim: [7, 15, 0.25, -0.25], surfaceFidelity: 20 })
 
-  const geometry = generateExtrudedSurface(surface, 10, 0.2)
-  scene.push(drawSurface(geometry, { orientation: 'inward' }))
+  const resultingGeometry = subtract(
+    drawSurface(geometry, { orientation: 'inward' }) as Geom3,
+    drawSurface(geometry2, { orientation: 'inward' }) as Geom3,
+    drawSurface(geometry3, { orientation: 'inward' }) as Geom3,
+    drawSurface(geometry4, { orientation: 'inward' }) as Geom3
+  )
+
+  scene.push(resultingGeometry)
 
   return mirror({ normal: [1, 0, 0] }, scene)
 }

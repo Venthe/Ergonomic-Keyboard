@@ -11,6 +11,7 @@ import { BezierSurfaceControlPoints, FaceIndices, Surface, SurfacePoint } from '
 import { translate } from '@jscad/modeling/src/operations/transforms'
 import { drawLine } from './draw'
 import { WithAdditionalGeometry } from '../keyboardTypes'
+import { moveOriginByExtrusionSize, _extrudeSurface } from './surfaceExtrusion'
 
 interface QuadFace {
   faces: QuadIndices
@@ -80,15 +81,19 @@ function generateQuadFaces(contextsForGeneratedLines: FrameContext[], pointsPerC
 
 export const generateSurface = (
   surfaceControlPoints: BezierSurfaceControlPoints,
-  surfaceFidelity: number = 10
+  { trim = [0, 0, 0, 0], surfaceFidelity = 10, extrude = 0 }: {
+    surfaceFidelity?: number,
+    trim?: [number, number, number, number],
+    extrude?: number
+  }
 ): WithAdditionalGeometry<Surface<SurfacePoint>> => {
-  const contextsForOriginalControlPoints: FrameContext[] = getFramesForOriginalControlPoints(surfaceControlPoints, surfaceFidelity)
+  const contextsForOriginalControlPoints: FrameContext[] = getFramesForOriginalControlPoints(surfaceControlPoints, surfaceFidelity, { trim: [trim[0], trim[1]] })
   const pointsPerContext = calculatePointsPerContext(contextsForOriginalControlPoints)
-  const contextsForGeneratedLines = generateIntermediateFrames(contextsForOriginalControlPoints, surfaceFidelity)
+  const contextsForGeneratedLines = generateIntermediateFrames(contextsForOriginalControlPoints, surfaceFidelity, { trim: [trim[2], trim[3]] })
   const uniqueOrigins: Vec3[] = getUniqueOriginsFromContext(contextsForGeneratedLines)
   const quadFaces: QuadFace[] = generateQuadFaces(contextsForGeneratedLines, pointsPerContext, uniqueOrigins)
 
-  return {
+  const result = {
     points: contextsForGeneratedLines.flat().map(f => f.frames).flat().map<SurfacePoint>(f => ({
       origin: f.origin,
       normal: (calculateNormals(quadFaces))[f.origin.toString()].normal,
@@ -97,6 +102,10 @@ export const generateSurface = (
     })),
     faces: quadFaces.map(f => f.faces).flat(),
     additionalGeometry: []
+  }
+  return {
+    ...result,
+    points: result.points.map(p => ({ ...p, origin: moveOriginByExtrusionSize(p.origin, p.normal, extrude)}))
   }
 }
 
@@ -108,6 +117,7 @@ export function drawSurface(
     drawNormal?: boolean
     drawBorder?: boolean
   }): Geometry | RecursiveArray<Geometry> {
+
   const {
     points,
     faces
@@ -142,13 +152,19 @@ const average = (vectors: Vec3[]): Vec3 => scale(vectors.reduce(add, [0, 0, 0]),
 const calculatePointsPerContext = (contextsForOriginalControlPoints: FrameContext[]): number =>
   contextsForOriginalControlPoints[0].frames.length
 
-const getFramesForOriginalControlPoints = (surfaceControlPoints: BezierSurfaceControlPoints, surfaceFidelity: number): FrameContext[] =>
-  surfaceControlPoints.map(controlPoints => FrameContext.generateRotationMinimizingFrames(controlPoints, surfaceFidelity))
+const getFramesForOriginalControlPoints = (surfaceControlPoints: BezierSurfaceControlPoints, surfaceFidelity: number,
+  {
+    trim = [0, 0]
+  }: { trim?: [number, number] } = {}): FrameContext[] =>
+  surfaceControlPoints.map(controlPoints => FrameContext.generateRotationMinimizingFrames(controlPoints, surfaceFidelity, undefined, { trim }))
 
-const generateIntermediateFrames = (contextsForOriginalControlPoints: FrameContext[], surfaceFidelity: number): FrameContext[] => {
+const generateIntermediateFrames = (contextsForOriginalControlPoints: FrameContext[], surfaceFidelity: number,
+  {
+    trim = [0, 0]
+  }: { trim?: [number, number] } = {}): FrameContext[] => {
   const originForFrameInContexts = (i: number, idx: number): Vec3 => contextsForOriginalControlPoints[i].frames[idx].origin
   const controlPointsForGeneratedLines: BezierControlPoints[] = range(calculatePointsPerContext(contextsForOriginalControlPoints)).map(p => [originForFrameInContexts(0, p), originForFrameInContexts(1, p), originForFrameInContexts(2, p), originForFrameInContexts(3, p)])
-  let frameContexts = controlPointsForGeneratedLines.map(controlPointsForGeneratedLine => FrameContext.generateRotationMinimizingFrames(controlPointsForGeneratedLine, surfaceFidelity))
+  let frameContexts = controlPointsForGeneratedLines.map(controlPointsForGeneratedLine => FrameContext.generateRotationMinimizingFrames(controlPointsForGeneratedLine, surfaceFidelity, undefined, { trim }))
   frameContexts[0].frames.forEach(f => f.setAsBorder())
   frameContexts[frameContexts.length - 1].frames.forEach(f => f.setAsBorder())
   return frameContexts
