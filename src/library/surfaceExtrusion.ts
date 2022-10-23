@@ -2,7 +2,6 @@ import { colorize } from '@jscad/modeling/src/colors'
 import { Vec3 } from '@jscad/modeling/src/maths/vec3'
 import { circle, sphere } from '@jscad/modeling/src/primitives'
 import { json } from 'stream/consumers'
-import { WithAdditionalGeometry } from '../keyboardTypes'
 import { generateSurface } from './bezierSurface'
 import { BezierSurfaceControlPoints, FaceIndices, Surface, SurfacePoint } from './surface'
 import { add, normalize, scale } from './vector3'
@@ -15,7 +14,7 @@ type WithData = (ExtrudedPointData & { index: number, faces: FaceIndices[] })
 export const moveOriginByExtrusionSize = (point: Vec3, direction: Vec3, size: number): Vec3 =>
   add(point, scale(normalize(direction), size))
 
-export const _extrudeSurface = (originalSurface: WithAdditionalGeometry<Surface<SurfacePoint>>, extrusionSize: number): WithAdditionalGeometry<Surface<SurfacePoint & ExtrudedPointData>> => {
+export const _extrudeSurface = (originalSurface: Surface<SurfacePoint>, extrusionSize: number): Surface<SurfacePoint & ExtrudedPointData> => {
 
   const result = {
     faces: originalSurface.faces,
@@ -24,16 +23,15 @@ export const _extrudeSurface = (originalSurface: WithAdditionalGeometry<Surface<
       origin: moveOriginByExtrusionSize(originalPoint.origin, originalPoint.normal, extrusionSize),
       originalPointIndex: originalPointIndex,
       isEdge: originalPoint.isEdge
-    })),
-    additionalGeometry: originalSurface.additionalGeometry
+    }))
   }
   return result
 }
 
-export const extrudeSurface = (originalSurface: WithAdditionalGeometry<Surface<SurfacePoint>>, extrusion: number): WithAdditionalGeometry<Surface<SurfacePoint | ExtrudedPointData>> =>
+export const extrudeSurface = (originalSurface: Surface<SurfacePoint>, extrusion: number): Surface<SurfacePoint | ExtrudedPointData> =>
   concatSurface(originalSurface, _extrudeSurface(originalSurface, extrusion))
 
-const concatSurface = (originalSurface: WithAdditionalGeometry<Surface<SurfacePoint>>, extrudedSurface: Surface<ExtrudedPointData>): WithAdditionalGeometry<Surface<SurfacePoint | ExtrudedPointData>> => {
+const concatSurface = (originalSurface: Surface<SurfacePoint>, extrudedSurface: Surface<ExtrudedPointData>): Surface<SurfacePoint | ExtrudedPointData> => {
 
   const concatenatedPoints = concatPoints(originalSurface.points, extrudedSurface.points)
     .map(pointWithIndex)
@@ -70,8 +68,7 @@ const concatSurface = (originalSurface: WithAdditionalGeometry<Surface<SurfacePo
 
   return {
     points: concatenatedPoints,
-    faces: faces.concat(borderFaces),
-    additionalGeometry: [].concat(originalSurface.additionalGeometry)
+    faces: faces.concat(borderFaces)
   }
 }
 
@@ -152,7 +149,7 @@ export const generateExtrudedSurface = (
     surfaceFidelity = 10,
     trim = [0, 0, 0, 0]
   }: { surfaceFidelity?: number, trim?: [number, number, number, number] } = {}
-): WithAdditionalGeometry<Surface<SurfacePoint>> => {
+): Surface<SurfacePoint> => {
   const isExtrusionOneWay: boolean = !Array.isArray(extrusion)
   const extrudeDown: number = -1 * (isExtrusionOneWay ? (extrusion as number) / 2 : ((extrusion as [number, number])[0]))
   const extrudeUp: number = (isExtrusionOneWay ? (extrusion as number) : (extrusion as [number, number])[1] + ((extrusion as [number, number])[0]))

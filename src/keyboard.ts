@@ -14,6 +14,8 @@ import { generateExtrudedSurface } from './library/surfaceExtrusion'
 import { constructionLine } from './library/utilities'
 import * as vector3 from './library/vector3'
 
+export const additionalGeometry: RecursiveArray<Geometry | Geom3> = []
+
 const getParameterDefinitions = (): ParameterDefinitions => [
   { name: 'keys', type: 'group', caption: 'Keys' },
   { name: 'Key_padding', type: 'number', initial: 4, min: 0, step: 1, max: 6, caption: 'Distance between keys' },
@@ -306,6 +308,7 @@ const main: MainFunction = (params: Params) => {
   )
 
   scene.push(resultingGeometry)
+  scene.push(additionalGeometry)
 
   return mirror({ normal: [1, 0, 0] }, scene)
 }

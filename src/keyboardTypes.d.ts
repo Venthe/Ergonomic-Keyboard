@@ -24,5 +24,3 @@ export interface Variables {
 }
 
 export type ExtendedParams = Params & Variables
-
-export type WithAdditionalGeometry<T> = T & {additionalGeometry: Geom3 | RecursiveArray<Geom3>}
