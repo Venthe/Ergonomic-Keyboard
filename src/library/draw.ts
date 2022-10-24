@@ -36,7 +36,12 @@ export interface DrawPointsOptions {
   size?: number
   invertNormals?: boolean
   normalSize?: number
+  tangentGirth?: number
+  normalGirth?: number
   tangentSize?: number
+  binormalSize?: number
+  binormalGirth?: number
+  drawBinormal?: boolean
 }
 
 export const drawPoints = (
@@ -49,21 +54,30 @@ export const drawPoints = (
     drawControlPoints = false,
     drawControlLine = false,
     size = params.Debug_point_base_size,
+    tangentGirth = params.Debug_point_base_size,
+    normalGirth = params.Debug_point_base_size,
     invertNormals = false,
     normalSize = 10,
-    tangentSize = 10
+    tangentSize = 10,
+    binormalGirth = params.Debug_point_base_size,
+    binormalSize = 10,
+    drawBinormal = false
   }: DrawPointsOptions = {}
 ): RecursiveArray<Geometry> | Geometry => {
   const result: RecursiveArray<Geometry> | Geometry = []
 
   result.push(colorize(color, drawPolyline(frameContext.frames.map(frame => frame.origin), size * 0.4)))
 
+  if (drawBinormal) {
+    result.push(colorize([0, 0, 1], frameContext.frames.map(frame => drawLine(frame.origin, add(frame.origin, scale(frame.binormal, binormalSize)), binormalGirth))))
+  }
+
   if (drawNormal) {
-    result.push(colorize([1, 0, 1], frameContext.frames.map(frame => drawLine(frame.origin, add(frame.origin, scale(frame.normal, (invertNormals ? -1 : 1) * normalSize)), size * 0.2))))
+    result.push(colorize([1, 0, 1], frameContext.frames.map(frame => drawLine(frame.origin, add(frame.origin, scale(frame.normal, (invertNormals ? -1 : 1) * normalSize)), normalGirth))))
   }
 
   if (drawTangent) {
-    result.push(colorize([0, 0, 0], frameContext.frames.map(frame => drawLine(frame.origin, add(frame.origin, scale(frame.tangent, tangentSize)), size))))
+    result.push(colorize([0, 0, 0], frameContext.frames.map(frame => drawLine(frame.origin, add(frame.origin, scale(frame.tangent, tangentSize)), tangentGirth))))
   }
 
   if (drawControlLine) {

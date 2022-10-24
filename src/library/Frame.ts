@@ -68,7 +68,16 @@ export class Frame {
   * @param rotationalAxis rotational axis vector
   * @param normal normal vector
   */
-  public constructor(readonly origin: Vec3, readonly tangent: Vec3, readonly rotationalAxis: Vec3, readonly normal: Vec3, readonly step: number, readonly context: FrameContext, private border: boolean = false) { }
+  public constructor(
+    readonly origin: Vec3,
+    readonly tangent: Vec3,
+    readonly rotationalAxis: Vec3,
+    readonly normal: Vec3,
+    readonly step: number,
+    readonly context: FrameContext,
+    readonly binormal: Vec3,
+    private border: boolean = false
+  ) { }
 
   public generateNextRotationMinimizingFrame(): Frame {
     const nextStep: number = this.step + this.context.stepSize
@@ -84,6 +93,7 @@ export class Frame {
     const c2: number = dot(v2, v2)
     const newFrameRotationalAxis: Vec3 = subtract(riL, scale(v2, 2 / c2 * dot(v2, riL)))
     const newFrameNormal: Vec3 = cross(newFrameRotationalAxis, newFrameTangent)
+    const binormal: Vec3 = cross(newFrameTangent, newFrameNormal)
 
     return new Frame(
       newFrameOrigin,
@@ -91,7 +101,8 @@ export class Frame {
       newFrameRotationalAxis,
       newFrameNormal,
       nextStep,
-      this.context
+      this.context,
+      binormal
     )
   }
 
@@ -100,8 +111,9 @@ export class Frame {
     const tangent = Frame.frenetTangent(step, context.controlPoints)
     const rotationalAxis = originFrame?.rotationalAxis ?? Frame.frenetRotationalAxis(step, context.controlPoints)
     const normal = originFrame?.normal ?? Frame.frenetNormal(step, context.controlPoints)
+    const binormal: Vec3 = cross(tangent, normal)
 
-    return new Frame(origin, tangent, rotationalAxis, normal, step, context)
+    return new Frame(origin, tangent, rotationalAxis, normal, step, context, binormal)
   }
 
   /**
