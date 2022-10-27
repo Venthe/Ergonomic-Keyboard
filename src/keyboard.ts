@@ -1,17 +1,17 @@
 import { Geom3, Geometry } from '@jscad/modeling/src/geometries/types'
 import { Vec3 } from '@jscad/modeling/src/maths/vec3'
+import { subtract } from '@jscad/modeling/src/operations/booleans'
 import { mirror, translate } from '@jscad/modeling/src/operations/transforms'
-import { sphere } from '@jscad/modeling/src/primitives'
 import RecursiveArray from '@jscad/modeling/src/utils/recursiveArray'
-import { Console } from 'console'
 import { Entrypoint, MainFunction, ParameterDefinitions } from './jscad'
 import { ExtendedParams, Params, Variables } from './keyboardTypes'
-import { approximateStepToFindPointOnSecondCurveViaNormal, bezier3, BezierControlPoints, joinBezierByTangent } from './library/bezier'
-import { drawContinuousPoints, drawLine, drawPoints } from './library/draw'
+import { BezierControlPoints, joinBezierByTangent } from './library/bezier'
+import { drawSurface } from './library/bezierSurface'
+import { drawContinuousPoints, drawPoints } from './library/draw'
 import { FrameContext } from './library/Frame'
+import { BezierSurfaceControlPoints } from './library/surface'
+import { generateExtrudedSurface } from './library/surfaceExtrusion'
 import { constructionLine } from './library/utilities'
-import { add, cross, scale } from './library/vector3'
-var Algebrite = require('algebrite')
 
 export const additionalGeometry: RecursiveArray<Geometry | Geom3> = []
 
@@ -285,47 +285,28 @@ const main: MainFunction = (params: Params) => {
   // // )
   // // // TODO: Add join by tangent surface
   // // //  Target support: 5x3 patches
-  // const surface: BezierSurfaceControlPoints = [
-  //   [[0, 0, 0], [5, -5, 0], [15, -5, 0], [20, 0, 0]],
-  //   [[0, 5, 0], [5, 5, 5], [15, 5, -15], [20, 5, 0]],
-  //   [[0, 15, 0], [5, 15, -10], [15, 15, 10], [20, 15, 0]],
-  //   [[-10, 40, 0], [5, 45, 0], [15, 45, 0], [20, 40, 0]]
-  // ]
-  // // TODO: positive second trim is problematic..., as second trim cannot be absolute.
-  // //  Suggestion: take a point on starting line on the trim point, take a normal oriented to the next line - the point where crossing occurs, will give us the new trim point
-  // //  This should be done by "trim a b c d should be normal based"
-  // const geometry = generateExtrudedSurface(surface, 0.2, { trim: [0, 0, 0, 0], surfaceFidelity: 20 })
-  // const geometry2 = generateExtrudedSurface(surface, [1, 1], { trim: [0.25, 1.75, 0.25, -0.25], surfaceFidelity: 20 })
-  // const geometry3 = generateExtrudedSurface(surface, [1, 1], { trim: [2, 4, 3, 15], surfaceFidelity: 20 })
-  // const geometry4 = generateExtrudedSurface(surface, [1, 1], { trim: [7, 15, 0.25, -0.25], surfaceFidelity: 20 })
+  const surface: BezierSurfaceControlPoints = [
+    [[0, 0, 0], [5, -5, 0], [15, -5, 0], [20, 0, 0]],
+    [[0, 5, 0], [5, 5, 5], [15, 5, -15], [20, 5, 0]],
+    [[0, 15, 0], [5, 15, -10], [15, 15, 10], [20, 15, 0]],
+    [[-10, 40, 0], [5, 45, 0], [15, 45, 0], [20, 40, 0]]
+  ]
+  // TODO: positive second trim is problematic..., as second trim cannot be absolute.
+  //  Suggestion: take a point on starting line on the trim point, take a normal oriented to the next line - the point where crossing occurs, will give us the new trim point
+  //  This should be done by "trim a b c d should be normal based"
+  const geometry = generateExtrudedSurface(surface, 0.2, { trim: [0, 0, 0, 0], surfaceFidelity: 20 })
+  const geometry2 = generateExtrudedSurface(surface, [1, 1], { trim: [0.25, 1.75, 0.25, -0.25], surfaceFidelity: 20 })
+  const geometry3 = generateExtrudedSurface(surface, [1, 1], { trim: [2, 4, 3, 15], surfaceFidelity: 20 })
+  const geometry4 = generateExtrudedSurface(surface, [1, 1], { trim: [7, 15, 0.25, -0.25], surfaceFidelity: 20 })
 
-  // const resultingGeometry = subtract(
-  //   drawSurface(geometry, { orientation: 'inward' }) as Geom3,
-  //   drawSurface(geometry2, { orientation: 'inward' }) as Geom3,
-  //   drawSurface(geometry3, { orientation: 'inward' }) as Geom3,
-  //   drawSurface(geometry4, { orientation: 'inward' }) as Geom3
-  // )
-
-  // scene.push(resultingGeometry)
-  const b1: BezierControlPoints = [[0, 0, 0], [5, -5, 0], [15, -5, 0], [20, 0, 0]]
-  const b2: BezierControlPoints = [[0, 5, 0], [5, 5, 5], [15, 5, -15], [20, 5, 0]]
-  const f1 = FrameContext.generateRotationMinimizingFrames(b1, 15)
-  const f2 = FrameContext.generateRotationMinimizingFrames(b2, 15)
-  const m1 = drawPoints(f1, extendedParamsWithVariables, { drawNormal: true, drawTangent: false, size: 0.2, tangentGirth: 0.1, normalGirth: 0.1, tangentSize: 3, normalSize: 3, drawBinormal: true, binormalSize: 3, binormalGirth: 0.1 })
-  const m2 = drawPoints(f2, extendedParamsWithVariables, { drawNormal: true, drawTangent: false, size: 0.2, tangentGirth: 0.1, normalGirth: 0.1, tangentSize: 3, normalSize: 3, drawBinormal: true, binormalSize: 3, binormalGirth: 0.1 })
-  additionalGeometry.push(m1)
-  additionalGeometry.push(m2)
-
-  const sampleFrame = f1.frames[5]
-
-  const approximatePointOnSecondCurve = approximateStepToFindPointOnSecondCurveViaNormal(b2, { originalPointOrigin: sampleFrame.origin, originalPointTangentVector: sampleFrame.tangent, iteration: 0 })
-  additionalGeometry.push(
-    drawLine(
-      sampleFrame.origin,
-      bezier3(approximatePointOnSecondCurve.guessedStepValue, b2),
-      0.1
-    )
+  const resultingGeometry = subtract(
+    drawSurface(geometry, { orientation: 'inward' }) as Geom3,
+    drawSurface(geometry2, { orientation: 'inward' }) as Geom3,
+    drawSurface(geometry3, { orientation: 'inward' }) as Geom3,
+    drawSurface(geometry4, { orientation: 'inward' }) as Geom3
   )
+
+  scene.push(resultingGeometry)
 
   scene.push(additionalGeometry)
 
