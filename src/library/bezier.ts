@@ -147,4 +147,36 @@ function generateLengthsForCurvePoints(generatedPoints: { point: Vec3, step: num
   return length
 }
 
+export const approximateStepToFindPointOnSecondCurveViaNormal: any = (
+  targetCurveControlPoints: BezierControlPoints,
+  { originalPointOrigin, originalPointTangentVector, iteration },
+  bisectMinimum: number = 0, bisectMaximum: number = 1,
+  previousResult = undefined,
+  precision = 0.05
+) => {
+  if (iteration > 5) {
+    return previousResult
+  }
+
+  const guessedStepValue = ((bisectMaximum - bisectMinimum) / 2) + bisectMinimum
+
+  if (guessedStepValue < 0)
+    throw new Error("This should never happen - guessed step value < 0: " + guessedStepValue)
+
+  const pointOnSecondCurve = bezier3(guessedStepValue, targetCurveControlPoints)
+  const distanceToTangentPlane = originalPointTangentVector[0] * (pointOnSecondCurve[0] - originalPointOrigin[0]) + originalPointTangentVector[1] * (pointOnSecondCurve[1] - originalPointOrigin[1]) + originalPointTangentVector[2] * (pointOnSecondCurve[2] - originalPointOrigin[2])
+
+  const result = { guessedStepValue, distanceToTangentPlane }
+
+  if (Math.abs(distanceToTangentPlane) < precision)
+    return result
+
+  const guessBetweenCurrentGuessAndMaximum = approximateStepToFindPointOnSecondCurveViaNormal(targetCurveControlPoints, { originalPointOrigin, originalPointTangentVector, iteration: iteration + 1 }, guessedStepValue, bisectMaximum, result)
+  const guessBetweenCurrentGuessAndMinimum = approximateStepToFindPointOnSecondCurveViaNormal(targetCurveControlPoints, { originalPointOrigin, originalPointTangentVector, iteration: iteration + 1 }, bisectMinimum, guessedStepValue, result)
+  return [
+    guessBetweenCurrentGuessAndMaximum,
+    guessBetweenCurrentGuessAndMinimum
+  ].reduce((p, c) => Math.abs(p.distanceToTangentPlane) < Math.abs(c.distanceToTangentPlane) ? p : c)
+}
+
 // export function bezier_get_point_at_unit(points, distance, segments=20) = calculate_bezier_point_with_normal(distance/polyline_length(get_bezier_points(segment_bezier3(points, segments))), points);
