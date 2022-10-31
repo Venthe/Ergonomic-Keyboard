@@ -1,16 +1,17 @@
-import { FrameContext } from './Frame'
+import { Frame, FrameContext } from './Frame'
 import { range } from './collections'
 import { BezierControlPoints } from './bezier'
 import { Vec3 } from '@jscad/modeling/src/maths/vec3'
 import RecursiveArray from '@jscad/modeling/src/utils/recursiveArray'
 import { Geometry } from '@jscad/modeling/src/geometries/types'
-import { RGB, RGBA } from '@jscad/modeling/src/colors'
+import { colorize, RGB, RGBA } from '@jscad/modeling/src/colors'
 import { add, cross, scale, subtract } from './vector3'
 import { polyhedron, sphere } from '@jscad/modeling/src/primitives'
 import { BezierSurfaceControlPoints, FaceIndices, Surface, SurfacePoint } from './surface'
 import { translate } from '@jscad/modeling/src/operations/transforms'
 import { drawLine } from './draw'
 import { moveOriginByExtrusionSize, _extrudeSurface } from './surfaceExtrusion'
+import { additionalGeometry } from '../keyboard'
 
 interface QuadFace {
   faces: QuadIndices
@@ -85,7 +86,7 @@ export const generateSurface = (
     trim?: [number, number, number, number],
     extrude?: number
   }
-): Surface<SurfacePoint> => {
+): Surface<SurfacePoint> & { horizontalPoints: [Frame, Frame] } => {
   const contextsForOriginalControlPoints: FrameContext[] = getFramesForOriginalControlPoints(surfaceControlPoints, surfaceFidelity, { trim: [trim[0], trim[1]] })
   const pointsPerContext = calculatePointsPerContext(contextsForOriginalControlPoints)
   const contextsForGeneratedLines = generateIntermediateFrames(contextsForOriginalControlPoints, surfaceFidelity, { trim: [trim[2], trim[3]] })
@@ -102,9 +103,11 @@ export const generateSurface = (
     faces: quadFaces.map(f => f.faces).flat(),
     additionalGeometry: []
   }
+
   return {
     ...result,
-    points: result.points.map(p => ({ ...p, origin: moveOriginByExtrusionSize(p.origin, p.normal, extrude)}))
+    points: result.points.map(p => ({ ...p, origin: moveOriginByExtrusionSize(p.origin, p.normal, extrude) })),
+    horizontalPoints: [contextsForGeneratedLines[0].frames[0], contextsForGeneratedLines[0].frames[surfaceFidelity]]
   }
 }
 

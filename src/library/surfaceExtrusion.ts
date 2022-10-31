@@ -1,8 +1,13 @@
 import { colorize } from '@jscad/modeling/src/colors'
+import { Geom3, Geometry } from '@jscad/modeling/src/geometries/types'
 import { Vec3 } from '@jscad/modeling/src/maths/vec3'
-import { circle, sphere } from '@jscad/modeling/src/primitives'
+import { subtract, union } from '@jscad/modeling/src/operations/booleans'
+import { circle, polygon, polyhedron, sphere } from '@jscad/modeling/src/primitives'
+import RecursiveArray from '@jscad/modeling/src/utils/recursiveArray'
 import { json } from 'stream/consumers'
-import { generateSurface } from './bezierSurface'
+import { additionalGeometry } from '../keyboard'
+import { drawSurface, generateSurface } from './bezierSurface'
+import { Frame } from './Frame'
 import { BezierSurfaceControlPoints, FaceIndices, Surface, SurfacePoint } from './surface'
 import { add, normalize, scale } from './vector3'
 
@@ -147,14 +152,78 @@ export const generateExtrudedSurface = (
   extrusion: number | [number, number],
   {
     surfaceFidelity = 10,
-    trim = [0, 0, 0, 0]
-  }: { surfaceFidelity?: number, trim?: [number, number, number, number] } = {}
-): Surface<SurfacePoint> => {
+    trim = [0, 0, 0, 0],
+    normalTrimLeft = false,
+    normalTrimRight = false
+  }: { surfaceFidelity?: number, trim?: [number, number, number, number], normalTrimLeft?: boolean, normalTrimRight?: boolean } = {}
+): Geometry | RecursiveArray<Geometry> => {
   const isExtrusionOneWay: boolean = !Array.isArray(extrusion)
   const extrudeDown: number = -1 * (isExtrusionOneWay ? (extrusion as number) / 2 : ((extrusion as [number, number])[0]))
   const extrudeUp: number = (isExtrusionOneWay ? (extrusion as number) : (extrusion as [number, number])[1] + ((extrusion as [number, number])[0]))
 
+
   const primarySurface = generateSurface(surfaceControlPoints, { surfaceFidelity, trim, extrude: extrudeDown })
-  const extrudedSurface = extrudeSurface(primarySurface, extrudeUp)
-  return extrudedSurface;
+  let finalSurface = primarySurface;
+
+  if (normalTrimLeft || normalTrimRight) {
+    const actualTrim: [number, number, number, number] = [...trim]
+    if (normalTrimLeft)
+      actualTrim[2] = 0
+    if (normalTrimRight)
+      actualTrim[3] = 0
+    const nonTrimmedSurface = generateSurface(surfaceControlPoints, { surfaceFidelity, trim: actualTrim, extrude: extrudeDown })
+    const horizontalPoints = primarySurface.horizontalPoints
+
+    const cutBox = (originPoint: Frame, s: boolean) => {
+      const points = [
+        add(originPoint.origin, scale(scale(originPoint.normal, -1), 30)),
+        add(originPoint.origin, scale(scale(originPoint.binormal, -1), 30)),
+        add(originPoint.origin, scale(originPoint.normal, 30)),
+        add(originPoint.origin, scale(originPoint.binormal, 30))
+      ]
+      const extendedPoints = [
+        add(points[0], scale(scale(originPoint.tangent, s ? -1 : 1), 50)),
+        add(points[1], scale(scale(originPoint.tangent, s ? -1 : 1), 50)),
+        add(points[2], scale(scale(originPoint.tangent, s ? -1 : 1), 50)),
+        add(points[3], scale(scale(originPoint.tangent, s ? -1 : 1), 50))
+      ]
+
+      const inv = (a: Vec3) => s ? a : [a[2], a[1], a[0]]
+
+      return (
+        polyhedron({
+          points: [...points, ...extendedPoints],
+          faces: [
+            inv([0, 1, 2]), inv([3, 0, 2]),
+            inv([6, 5, 4]), inv([6, 4, 7]),
+            inv([1, 0, 4]), inv([4, 5, 1]),
+            inv([2, 1, 6]), inv([6, 1, 5]),
+            inv([4, 0, 7]), inv([7, 0, 3]),
+            inv([3, 2, 7]), inv([7, 2, 6])
+          ]
+        })
+      )
+    }
+
+    const extrudedSurface = drawSurface(extrudeSurface(nonTrimmedSurface, extrudeUp), { orientation: 'inward' }) as Geom3
+
+    const newLocal = cutBox(horizontalPoints[0], true)
+    const newLocal_1 = cutBox(horizontalPoints[1], false)
+
+    let result = extrudedSurface;
+    if (normalTrimLeft && normalTrimRight) {
+      result = subtract(result, union(newLocal, newLocal_1))
+    } else
+      if (normalTrimLeft) {
+        result = subtract(result, newLocal)
+      } else if (normalTrimRight) {
+        result = subtract(result, newLocal_1)
+      }
+
+    return result;
+
+  } else {
+    const extrudedSurface = extrudeSurface(finalSurface, extrudeUp)
+    return drawSurface(extrudedSurface, { orientation: 'inward' }) as Geom3;
+  }
 }

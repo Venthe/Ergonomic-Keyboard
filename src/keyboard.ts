@@ -266,7 +266,7 @@ const main: MainFunction = (params: Params) => {
   const scene: RecursiveArray<Geometry> | Geometry = []
   const extendedParamsWithVariables: ExtendedParams = { ...params, ...variables(params) }
 
-  // // if (params.Enable_debug) { console.debug('Parameters:', extendedParamsWithVariables) }
+  if (params.Enable_debug) { console.debug('Parameters:', extendedParamsWithVariables) }
 
   // // const keyboardArc = blockKeyboardArc(extendedParamsWithVariables)
   // // scene.push(
@@ -294,22 +294,21 @@ const main: MainFunction = (params: Params) => {
   // TODO: positive second trim is problematic..., as second trim cannot be absolute.
   //  Suggestion: take a point on starting line on the trim point, take a normal oriented to the next line - the point where crossing occurs, will give us the new trim point
   //  This should be done by "trim a b c d should be normal based"
-  const geometry = generateExtrudedSurface(surface, 0.2, { trim: [0, 0, 0, 0], surfaceFidelity: 20 })
-  const geometry2 = generateExtrudedSurface(surface, [1, 1], { trim: [0.25, 1.75, 0.25, -0.25], surfaceFidelity: 20 })
-  const geometry3 = generateExtrudedSurface(surface, [1, 1], { trim: [2, 4, 3, 15], surfaceFidelity: 20 })
-  const geometry4 = generateExtrudedSurface(surface, [1, 1], { trim: [7, 15, 0.25, -0.25], surfaceFidelity: 20 })
+  const mainBoard = generateExtrudedSurface(surface, 0.2, { trim: [0, 0, 0, 0], surfaceFidelity: 25 })
 
-  const resultingGeometry = subtract(
-    drawSurface(geometry, { orientation: 'inward' }) as Geom3,
-    drawSurface(geometry2, { orientation: 'inward' }) as Geom3,
-    drawSurface(geometry3, { orientation: 'inward' }) as Geom3,
-    drawSurface(geometry4, { orientation: 'inward' }) as Geom3
-  )
+  const { Key_padding: keyPadding, Key_size: keySize, Key_small_size_multiplier: keySmallSizeMultiplier } = extendedParamsWithVariables
 
-  scene.push(resultingGeometry)
+  const keys = [
+    generateExtrudedSurface(surface, [1, 1], { trim: [keyPadding, keyPadding + (keySize * keySmallSizeMultiplier), keyPadding, keySize], surfaceFidelity: 25, normalTrimRight: true }) as Geom3,
+    generateExtrudedSurface(surface, [1, 1], { trim: [keyPadding, keyPadding + (keySize * keySmallSizeMultiplier), (1 * keyPadding) + keySize, (1 * keyPadding) + (2 * keySize)], surfaceFidelity: 25, normalTrimRight: true, normalTrimLeft: true }) as Geom3,
+  ]
+
+  scene.push(subtract([
+    mainBoard as Geom3,
+    ...keys
+  ]))
 
   scene.push(additionalGeometry)
-
 
   return mirror({ normal: [1, 0, 0] }, scene)
 }

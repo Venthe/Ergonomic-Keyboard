@@ -19,10 +19,10 @@ const config = {
     usedExports: true
   },
   plugins: [
-    new ESLintPlugin({
-      extensions: ['.tsx', '.ts', '.js'],
-      exclude: 'node_modules'
-    }),
+    // new ESLintPlugin({
+    //   extensions: ['.tsx', '.ts', '.js'],
+    //   exclude: 'node_modules'
+    // }),
     OpenJSCADPlugin
   ],
   performance: {
@@ -46,7 +46,7 @@ const config = {
     libraryTarget: 'commonjs2',
     // filename: '[name].[contenthash].js',
     path: path.resolve(__dirname, 'dist'),
-    clean: true
+    clean: false
   },
   // FIXME: Required on windows?
   watchOptions: {
