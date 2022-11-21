@@ -213,12 +213,11 @@ export const generateExtrudedSurface = (
     let result = extrudedSurface;
     if (normalTrimLeft && normalTrimRight) {
       result = subtract(result, union(newLocal, newLocal_1))
-    } else
-      if (normalTrimLeft) {
-        result = subtract(result, newLocal)
-      } else if (normalTrimRight) {
-        result = subtract(result, newLocal_1)
-      }
+    } else if (normalTrimLeft) {
+      result = subtract(result, newLocal)
+    } else if (normalTrimRight) {
+      result = subtract(result, newLocal_1)
+    }
 
     return result;
 

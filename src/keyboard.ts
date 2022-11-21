@@ -1,7 +1,9 @@
+import { colorize } from '@jscad/modeling/src/colors'
 import { Geom3, Geometry } from '@jscad/modeling/src/geometries/types'
 import { Vec3 } from '@jscad/modeling/src/maths/vec3'
 import { subtract } from '@jscad/modeling/src/operations/booleans'
 import { mirror, translate } from '@jscad/modeling/src/operations/transforms'
+import { sphere } from '@jscad/modeling/src/primitives'
 import RecursiveArray from '@jscad/modeling/src/utils/recursiveArray'
 import { Entrypoint, MainFunction, ParameterDefinitions } from './jscad'
 import { ExtendedParams, Params, Variables } from './keyboardTypes'
@@ -291,6 +293,58 @@ const main: MainFunction = (params: Params) => {
     [[0, 15, 0], [5, 15, -10], [15, 15, 10], [20, 15, 0]],
     [[-10, 40, 0], [5, 45, 0], [15, 45, 0], [20, 40, 0]]
   ]
+
+  const transpose = matrix => {
+    let arr = [];
+    for (let i = 0; i < matrix.length; i++) {
+      arr.push([])
+      for (let j = 0; j < matrix.length; j++) {
+        arr[i].push(matrix[j][i])
+      }
+    }
+    return arr
+  }
+
+  const validateSurface = (s) => {
+    const extSur = [
+      [
+        s,
+        [
+          joinBezierByTangent(s[0], [[30, 0, 0], [40, 0, 0]]),
+          joinBezierByTangent(s[1], [[30, 10, 0], [40, 20, 0]]),
+          joinBezierByTangent(s[2], [[30, 25, 0], [40, 30, 0]]),
+          joinBezierByTangent(s[3], [[30, 50, 0], [40, 20, 0]])
+        ]
+      ],
+      [
+        [
+          joinBezierByTangent([s[0][0], s[1][0], s[2][0], s[3][0]],
+            [[-20, 45, 0], [-30, 50, 0]]),
+          joinBezierByTangent([s[0][1], s[1][1], s[2][1], s[3][1]],
+            [[5, 60, 0], [5, 65, 0]]),
+          joinBezierByTangent([s[0][2], s[1][2], s[2][2], s[3][2]],
+            [[15, 60, 0], [20, 65, 0]]),
+          joinBezierByTangent([s[0][3], s[1][3], s[2][3], s[3][3]],
+            [[20, 45, 0], [20, 60, 0]]),
+        ]
+      ]
+    ]
+
+
+    return extSur
+
+  }
+
+  const extSur = validateSurface(surface)
+
+  scene.push(generateExtrudedSurface(extSur[0][1], 0.2))
+  extSur[1][0]
+    .flatMap(a => a)
+    .map(a => sphere({ center: a, radius: 1 }))
+    .map(a => colorize([1, 0, 0], a))
+    .forEach(a => scene.push(a))
+  scene.push(generateExtrudedSurface(extSur[1][0], 0.2))
+
   // TODO: positive second trim is problematic..., as second trim cannot be absolute.
   //  Suggestion: take a point on starting line on the trim point, take a normal oriented to the next line - the point where crossing occurs, will give us the new trim point
   //  This should be done by "trim a b c d should be normal based"
@@ -302,6 +356,8 @@ const main: MainFunction = (params: Params) => {
     generateExtrudedSurface(surface, [1, 1], { trim: [keyPadding, keyPadding + (keySize * keySmallSizeMultiplier), keyPadding, keySize], surfaceFidelity: 25, normalTrimRight: true }) as Geom3,
     generateExtrudedSurface(surface, [1, 1], { trim: [keyPadding, keyPadding + (keySize * keySmallSizeMultiplier), (1 * keyPadding) + keySize, (1 * keyPadding) + (2 * keySize)], surfaceFidelity: 25, normalTrimRight: true, normalTrimLeft: true }) as Geom3,
   ]
+
+  scene.push(keys.map(a => colorize([1, 0,0], a)))
 
   scene.push(subtract([
     mainBoard as Geom3,
