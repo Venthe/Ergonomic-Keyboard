@@ -27,10 +27,14 @@ export const bezier3 = (step: number, controlPoints: BezierControlPoints): Vec3 
     scale(controlPoints[3], (1 * Math.pow(step, 3)))
   )
 
+export function mirrorPointAroundCenter(point: Vec3, center: Vec3, scalar: number = 1): Vec3 {
+  return add(scale(subtract(point, center), -1 * scalar), center)
+}
+
 export const joinBezierByTangent = (originalBezierControlPoints: BezierControlPoints, targetBezier: [Vec3, Vec3], scalar: number = 1): BezierControlPoints =>
   [
     originalBezierControlPoints[3],
-    add(scale(subtract(originalBezierControlPoints[2], originalBezierControlPoints[3]), -1 * scalar), originalBezierControlPoints[3]),
+    mirrorPointAroundCenter(originalBezierControlPoints[2], originalBezierControlPoints[3], scalar),
     targetBezier[0],
     targetBezier[1]
   ]

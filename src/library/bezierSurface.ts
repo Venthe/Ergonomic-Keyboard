@@ -81,11 +81,15 @@ function generateQuadFaces(contextsForGeneratedLines: FrameContext[], pointsPerC
 
 export const generateSurface = (
   surfaceControlPoints: BezierSurfaceControlPoints,
-  { trim = [0, 0, 0, 0], surfaceFidelity = 10, extrude = 0 }: {
+  {
+    trim = [0, 0, 0, 0],
+    surfaceFidelity = 10,
+    extrude = 0
+  }: {
     surfaceFidelity?: number,
     trim?: [number, number, number, number],
     extrude?: number
-  }
+  } = {}
 ): Surface<SurfacePoint> & { horizontalPoints: [Frame, Frame] } => {
   const contextsForOriginalControlPoints: FrameContext[] = getFramesForOriginalControlPoints(surfaceControlPoints, surfaceFidelity, { trim: [trim[0], trim[1]] })
   const pointsPerContext = calculatePointsPerContext(contextsForOriginalControlPoints)
@@ -113,12 +117,14 @@ export const generateSurface = (
 
 export function drawSurface(
   surfaceData: Surface<SurfacePoint>,
-  options?: {
+  { drawSurface = true, ...options }: {
     colors?: Array<RGB | RGBA>
     orientation?: 'outward' | 'inward'
     drawNormal?: boolean
     drawBorder?: boolean
-  }): Geometry | RecursiveArray<Geometry> {
+    drawSurface?: boolean
+    drawPoints?: boolean
+  } = {}): Geometry | RecursiveArray<Geometry> {
 
   const {
     points,
@@ -126,12 +132,19 @@ export function drawSurface(
   }: Surface<SurfacePoint> = surfaceData
   const result = []
 
-  const surface = polyhedron({
-    points: points.map(p => p.origin),
-    faces,
-    ...options
-  })
-  result.push(surface)
+  if (drawSurface) {
+    const surface = polyhedron({
+      points: points.map(p => p.origin),
+      faces,
+      ...options
+    })
+    result.push(surface)
+  }
+
+  if (options?.drawPoints) {
+    const orig = points.map(p => p.origin).map(p => sphere({ center: p, radius: 0.2 }))
+    orig.forEach(el => result.push(el))
+  }
 
   if (options?.drawNormal) {
     const drawNormal = (p: SurfacePoint, { invert = false }: { invert?: boolean } = {}): Geometry => translate(p.origin, drawLine([0, 0, 0], scale(p.normal, (invert ? -1 : 1) * 0.3), 0.1))

@@ -1,14 +1,14 @@
 import { colorize } from '@jscad/modeling/src/colors'
 import { Geom3, Geometry } from '@jscad/modeling/src/geometries/types'
-import { Vec3 } from '@jscad/modeling/src/maths/vec3'
+import vec3, { Vec3 } from '@jscad/modeling/src/maths/vec3'
 import { subtract } from '@jscad/modeling/src/operations/booleans'
 import { mirror, translate } from '@jscad/modeling/src/operations/transforms'
 import { sphere } from '@jscad/modeling/src/primitives'
 import RecursiveArray from '@jscad/modeling/src/utils/recursiveArray'
 import { Entrypoint, MainFunction, ParameterDefinitions } from './jscad'
 import { ExtendedParams, Params, Variables } from './keyboardTypes'
-import { BezierControlPoints, joinBezierByTangent } from './library/bezier'
-import { drawSurface } from './library/bezierSurface'
+import { BezierControlPoints, joinBezierByTangent, mirrorPointAroundCenter } from './library/bezier'
+import { drawSurface, generateSurface } from './library/bezierSurface'
 import { drawContinuousPoints, drawPoints } from './library/draw'
 import { FrameContext } from './library/Frame'
 import { BezierSurfaceControlPoints } from './library/surface'
@@ -305,27 +305,38 @@ const main: MainFunction = (params: Params) => {
     return arr
   }
 
-  const validateSurface = (s) => {
+  const stitchQuadBezierSurfacesByTangent = (data: { topLeft: any, topRight: any, bottomLeft: any, bottomRight: any }) => {
+    const { topLeft, topRight, bottomLeft, bottomRight } = data
+
+    const controlPointsByColumn = (column): BezierControlPoints => ([topLeft[0][column], topLeft[1][column], topLeft[2][column], topLeft[3][column]])
+    const bottomLeftByColumn = (column): [Vec3, Vec3] => ([bottomLeft[0][column], bottomLeft[1][column]])
+    const averagePoint = (a: Vec3, b: Vec3) => (vec3.scale([0, 0, 0], vec3.add([0, 0, 0], a, b), 0.5))
+    const transpose = matrix => matrix[0].map((col, i) => matrix.map(row => row[i]))
+    const generatedTopRight = [
+      joinBezierByTangent(topLeft[0], topRight[0]),
+      joinBezierByTangent(topLeft[1], topRight[1]),
+      joinBezierByTangent(topLeft[2], topRight[2]),
+      joinBezierByTangent(topLeft[3], topRight[3])
+    ]
+    const generatedBottomLeft: [BezierControlPoints, BezierControlPoints, BezierControlPoints, BezierControlPoints] =
+      transpose([
+        joinBezierByTangent(controlPointsByColumn(0), bottomLeftByColumn(0)),
+        joinBezierByTangent(controlPointsByColumn(1), bottomLeftByColumn(1)),
+        joinBezierByTangent(controlPointsByColumn(2), bottomLeftByColumn(2)),
+        joinBezierByTangent(controlPointsByColumn(3), bottomLeftByColumn(3)),
+      ])
     const extSur = [
       [
-        s,
-        [
-          joinBezierByTangent(s[0], [[30, 0, 0], [40, 0, 0]]),
-          joinBezierByTangent(s[1], [[30, 10, 0], [40, 20, 0]]),
-          joinBezierByTangent(s[2], [[30, 25, 0], [40, 30, 0]]),
-          joinBezierByTangent(s[3], [[30, 50, 0], [40, 20, 0]])
-        ]
+        topLeft,
+        generatedTopRight
       ],
       [
+        generatedBottomLeft,
         [
-          joinBezierByTangent([s[0][0], s[1][0], s[2][0], s[3][0]],
-            [[-20, 45, 0], [-30, 50, 0]]),
-          joinBezierByTangent([s[0][1], s[1][1], s[2][1], s[3][1]],
-            [[5, 60, 0], [5, 65, 0]]),
-          joinBezierByTangent([s[0][2], s[1][2], s[2][2], s[3][2]],
-            [[15, 60, 0], [20, 65, 0]]),
-          joinBezierByTangent([s[0][3], s[1][3], s[2][3], s[3][3]],
-            [[20, 45, 0], [20, 60, 0]]),
+          [topLeft[3][3], generatedTopRight[3][1], generatedTopRight[3][2], generatedTopRight[3][3]],
+          [generatedBottomLeft[1][3], averagePoint(mirrorPointAroundCenter(generatedBottomLeft[1][2], generatedBottomLeft[1][3]), mirrorPointAroundCenter(generatedTopRight[2][1], generatedTopRight[3][1])), mirrorPointAroundCenter(generatedTopRight[2][2], generatedTopRight[3][2]), mirrorPointAroundCenter(generatedTopRight[2][3], generatedTopRight[3][3])],
+          [generatedBottomLeft[2][3], mirrorPointAroundCenter(generatedBottomLeft[2][2], generatedBottomLeft[2][3]), bottomRight[0][0], bottomRight[0][1]],
+          [generatedBottomLeft[3][3], mirrorPointAroundCenter(generatedBottomLeft[3][2], generatedBottomLeft[3][3]), bottomRight[1][0], bottomRight[1][1]],
         ]
       ]
     ]
@@ -335,34 +346,54 @@ const main: MainFunction = (params: Params) => {
 
   }
 
-  const extSur = validateSurface(surface)
+  const extSur = stitchQuadBezierSurfacesByTangent(
+    {
+      topLeft: [
+        [[0, 0, 0], [5, -5, 0], [15, -5, 0], [20, 0, 0]],
+        [[0, 5, 0], [5, 5, 5], [15, 5, -15], [20, 5, 0]],
+        [[0, 15, 0], [5, 15, -10], [15, 15, 10], [20, 15, 0]],
+        [[-10, 40, 0], [5, 45, 0], [15, 45, 0], [20, 40, 0]]
+      ],
+      topRight: [
+        [[30, 0, 0], [40, 0, 0]],
+        [[30, 10, 0], [40, 10, 0]],
+        [[30, 25, 0], [40, 15, 0]],
+        [[30, 30, 0], [40, 25, 0]]
+      ],
+      bottomLeft: [
+        [[-20, 55, 0], [5, 60, 0], [15, 60, 0], [20, 45, 0]],
+        [[-25, 70, 0], [5, 75, 0], [15, 65, 0], [25, 70, 0]]
+      ],
+      bottomRight: [
+        [[30, 40, 10], [50, 70, 9]],
+        [[50, 45, 30], [45, 75, 13]]
+      ]
+    }
+  )
 
-  scene.push(generateExtrudedSurface(extSur[0][1], 0.2))
-  extSur[1][0]
-    .flatMap(a => a)
-    .map(a => sphere({ center: a, radius: 1 }))
-    .map(a => colorize([1, 0, 0], a))
-    .forEach(a => scene.push(a))
-  scene.push(generateExtrudedSurface(extSur[1][0], 0.2))
+  scene.push(colorize([0, 0, 1], generateExtrudedSurface(extSur[0][0], 0.2)))
+  scene.push(colorize([1, 0, 1], generateExtrudedSurface(extSur[0][1], 0.2)))
+  scene.push(colorize([1, 0, 0], generateExtrudedSurface(extSur[1][0], 0.2)))
+  scene.push(colorize([0, 1, 0], generateExtrudedSurface(extSur[1][1], 0.2)))
 
   // TODO: positive second trim is problematic..., as second trim cannot be absolute.
   //  Suggestion: take a point on starting line on the trim point, take a normal oriented to the next line - the point where crossing occurs, will give us the new trim point
   //  This should be done by "trim a b c d should be normal based"
-  const mainBoard = generateExtrudedSurface(surface, 0.2, { trim: [0, 0, 0, 0], surfaceFidelity: 25 })
+  // const mainBoard = generateExtrudedSurface(surface, 0.2, { trim: [0, 0, 0, 0], surfaceFidelity: 25 })
 
-  const { Key_padding: keyPadding, Key_size: keySize, Key_small_size_multiplier: keySmallSizeMultiplier } = extendedParamsWithVariables
+  // const { Key_padding: keyPadding, Key_size: keySize, Key_small_size_multiplier: keySmallSizeMultiplier } = extendedParamsWithVariables
 
-  const keys = [
-    generateExtrudedSurface(surface, [1, 1], { trim: [keyPadding, keyPadding + (keySize * keySmallSizeMultiplier), keyPadding, keySize], surfaceFidelity: 25, normalTrimRight: true }) as Geom3,
-    generateExtrudedSurface(surface, [1, 1], { trim: [keyPadding, keyPadding + (keySize * keySmallSizeMultiplier), (1 * keyPadding) + keySize, (1 * keyPadding) + (2 * keySize)], surfaceFidelity: 25, normalTrimRight: true, normalTrimLeft: true }) as Geom3,
-  ]
+  // const keys = [
+  //   generateExtrudedSurface(surface, [1, 1], { trim: [keyPadding, keyPadding + (keySize * keySmallSizeMultiplier), keyPadding, keySize], surfaceFidelity: 25, normalTrimRight: true }) as Geom3,
+  //   generateExtrudedSurface(surface, [1, 1], { trim: [keyPadding, keyPadding + (keySize * keySmallSizeMultiplier), (1 * keyPadding) + keySize, (1 * keyPadding) + (2 * keySize)], surfaceFidelity: 25, normalTrimRight: true, normalTrimLeft: true }) as Geom3,
+  // ]
 
-  scene.push(keys.map(a => colorize([1, 0,0], a)))
+  // scene.push(keys.map(a => colorize([1, 0, 0], a)))
 
-  scene.push(subtract([
-    mainBoard as Geom3,
-    ...keys
-  ]))
+  // scene.push(subtract([
+  //   mainBoard as Geom3,
+  //   ...keys
+  // ]))
 
   scene.push(additionalGeometry)
 
