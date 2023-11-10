@@ -14,6 +14,8 @@ import { FrameContext } from './library/Frame'
 import { BezierSurfaceControlPoints } from './library/surface'
 import { generateExtrudedSurface } from './library/surfaceExtrusion'
 import { constructionLine } from './library/utilities'
+import { Schema } from 'inspector'
+import { diagonalStitch, horizontalStitch, mergeSurfaceByDistance, verticalStitch } from './library/stitching'
 
 export const additionalGeometry: RecursiveArray<Geometry | Geom3> = []
 
@@ -270,254 +272,386 @@ const main: MainFunction = (params: Params) => {
 
   if (params.Enable_debug) { console.debug('Parameters:', extendedParamsWithVariables) }
 
-  // // const keyboardArc = blockKeyboardArc(extendedParamsWithVariables)
-  // // scene.push(
-  // //   keyboardArc,
-  // //   mirror({ normal: [1, 0, 0] }, keyboardArc)
-  // // )
+  const fromEdgeOffset = (...p): BezierSurfaceControlPoints => ({}) as any
 
-  // // scene.push(
-  // //   translate([params.Arc_width + params.Key_padding, 0, 0], blockStraight(extendedParamsWithVariables))
-  // // )
+  const tempParams: any = {}
 
-  // // const arc = arcSurface(extendedParamsWithVariables)
-  // // scene.push(
-  // //   arc,
-  // //   mirror({ normal: [1, 0, 0] }, arc)
-  // // )
-  // // // TODO: Add join by tangent surface
-  // // //  Target support: 5x3 patches
-  const surface: BezierSurfaceControlPoints = [
-    [[0, 0, 0], [5, -5, 0], [15, -5, 0], [20, 0, 0]],
-    [[0, 5, 0], [5, 5, 5], [15, 5, -15], [20, 5, 0]],
-    [[0, 15, 0], [5, 15, -10], [15, 15, 10], [20, 15, 0]],
-    [[-10, 40, 0], [5, 45, 0], [15, 45, 0], [20, 40, 0]]
-  ]
-
-  const transpose = matrix => {
-    let arr = [];
-    for (let i = 0; i < matrix.length; i++) {
-      arr.push([])
-      for (let j = 0; j < matrix.length; j++) {
-        arr[i].push(matrix[j][i])
-      }
-    }
-    return arr
+  const edgeId = {
+    top: "top",
+    centerCutawayEdge: "centerCutawayEdge"
   }
 
-  const stitchQuadBezierSurfacesByTangent = (data: { topLeft: any, topRight: any, bottomLeft: any, bottomRight: any }) => {
-    const { topLeft, topRight, bottomLeft, bottomRight } = data
-
-    const controlPointsByColumn = (column): BezierControlPoints => ([topLeft[0][column], topLeft[1][column], topLeft[2][column], topLeft[3][column]])
-    const bottomLeftByColumn = (column): [Vec3, Vec3] => ([bottomLeft[0][column], bottomLeft[1][column]])
-    const averagePoint = (a: Vec3, b: Vec3) => (vec3.scale([0, 0, 0], vec3.add([0, 0, 0], a, b), 0.5))
-    const transpose = matrix => matrix[0].map((col, i) => matrix.map(row => row[i]))
-    const generatedTopRight = [
-      joinBezierByTangent(topLeft[0], topRight[0]),
-      joinBezierByTangent(topLeft[1], topRight[1]),
-      joinBezierByTangent(topLeft[2], topRight[2]),
-      joinBezierByTangent(topLeft[3], topRight[3])
-    ]
-    const generatedBottomLeft: [BezierControlPoints, BezierControlPoints, BezierControlPoints, BezierControlPoints] =
-      transpose([
-        joinBezierByTangent(controlPointsByColumn(0), bottomLeftByColumn(0)),
-        joinBezierByTangent(controlPointsByColumn(1), bottomLeftByColumn(1)),
-        joinBezierByTangent(controlPointsByColumn(2), bottomLeftByColumn(2)),
-        joinBezierByTangent(controlPointsByColumn(3), bottomLeftByColumn(3)),
-      ])
-    const extSur = [
-      [
-        topLeft,
-        generatedTopRight
-      ],
-      [
-        generatedBottomLeft,
-        [
-          [topLeft[3][3], generatedTopRight[3][1], generatedTopRight[3][2], generatedTopRight[3][3]],
-          [generatedBottomLeft[1][3], averagePoint(mirrorPointAroundCenter(generatedBottomLeft[1][2], generatedBottomLeft[1][3]), mirrorPointAroundCenter(generatedTopRight[2][1], generatedTopRight[3][1])), mirrorPointAroundCenter(generatedTopRight[2][2], generatedTopRight[3][2]), mirrorPointAroundCenter(generatedTopRight[2][3], generatedTopRight[3][3])],
-          [generatedBottomLeft[2][3], mirrorPointAroundCenter(generatedBottomLeft[2][2], generatedBottomLeft[2][3]), bottomRight[0][0], bottomRight[0][1]],
-          [generatedBottomLeft[3][3], mirrorPointAroundCenter(generatedBottomLeft[3][2], generatedBottomLeft[3][3]), bottomRight[1][0], bottomRight[1][1]],
-        ]
-      ]
-    ]
-
-    return extSur
-
-  }
-
-  var _0x = 0;
-
-  const extSur2 = [];
-  extSur2[0] = [];
-  extSur2[1] = [];
-  extSur2[2] = [];
-  extSur2[3] = [];
-  extSur2[4] = [];
-  extSur2[5] = [];
-  extSur2[0][0] = [
-    [[_0x, 18.5, 21.25], [3, 18.5, 21.25], [5, 18.2, 21.], [8, 18, 21]],
-    [[_0x, 18.5 + 80, 21.25], [2, 18.5 + 80, 21], [20, 18.5 + 80, 21], [24, 18.5 + 80, 21.25]],
-    [[_0x, 18.5 + 120 - 20, 22.5], [10, 18.5 + 120 - 20, 22.25], [24, 18.5 + 120 - 20, 22.25], [28, 134.5 - 20, 22.5]],
-    [[_0x, 18.5 + 120, 22.5], [12, 18 + 120, 22.25], [25, 18.5 + 117.5, 22.25], [33.85, 134.5, 22.5]]
+  const arc_0_0: BezierSurfaceControlPoints = [
+    [[0, 18.5, 21.25], [3, 18.5, 21.25], [5, 18.2, 21.], [8, 18, 21]],
+    [[0, 18.5 + 80, 21.25], [2, 18.5 + 80, 21], [20, 18.5 + 80, 21], [24, 18.5 + 80, 21.25]],
+    [[0, 18.5 + 120 - 20, 22.5], [10, 18.5 + 120 - 20, 22.25], [24, 18.5 + 120 - 20, 22.25], [28, 134.5 - 20, 22.5]],
+    [[0, 18.5 + 120, 22.5], [12, 18 + 120, 22.25], [25, 18.5 + 117.5, 22.25], [33.85, 134.5, 22.5]]
   ]
-  extSur2[1][0] = [
+  const arc_1_0: BezierSurfaceControlPoints = horizontalStitch([
     [[25, 15, 18.5], [27, 14.5, 18.2]],
     [[32, 14.5 + 80, 18.2], [46, 14.5 + 80, 18.2]],
     [[40, 14.5 + 100, 23], [51, 130 - 20, 18.2], 0.3],
     [[46, 12.5 + 120, 20.5], [56.85, 130, 18.2], 0.3]
-  ]
-  extSur2[2][0] = [
+  ], arc_0_0)
+  const arc_2_0: BezierSurfaceControlPoints = horizontalStitch([
     [[50, 10, 14], [64, 7.7, 10.5]],
     [[50, 8 + 80, 10.5], [76, 7.7 + 80, 10.5]],
     [[60, 110, 10.5], [84.4, 123.5 - 10, 10.5]],
     [[70, 127, 15], [84.4, 123.5, 10.5]]
-  ]
-  extSur2[3][0] = [
+  ], arc_1_0)
+  const arc_3_0: BezierSurfaceControlPoints = horizontalStitch([
     [[95, 4, 4.5], [100.8, 3.5, 3.8]],
     [[95, 4 + 80, 3.8], [110, 3.5 + 80, 3.8]],
     [[105, 4 + 100, 3.8], [117, 117 - 20, 3.8]],
     [[95, 121, 8], [117, 117, 3.8]]
-  ]
-  extSur2[4][0] = [
+  ], arc_2_0)
+  const arc_4_0: BezierSurfaceControlPoints = horizontalStitch([
     [[120, 2, 0], [160, 0, 0]],
     [[120, 2 + 80, 0], [160, 0 + 80, 0]],
     [[120, 113.85 - 10, 0], [160, 113.85 - 10, 0]],
     [[140, 113.85, 0], [160, 113.85, 0]]
-  ]
-  extSur2[0][1] = [
-    [[_0x, 18.5 + 120 + 20, 22.5], [15, 18.5 + 120 + 20, 22.5], [35, 18.5 + 120 + 20, 22.5], [40, 18.5 + 120 + 20, 22.5]],
-    [[_0x, 18.5 + 120 + 67, 13.5], [15, 18.5 + 120 + 67, 13.5], [35, 18.5 + 120 + 67, 13.5], [50, 18.5 + 120 + 67, 13.5]]
-  ]
-  extSur2[0][2] = [
-    [[_0x, 18.5 + 120 + 67 + 23 - (3 * Math.sqrt(3)), 9], [15, 18.5 + 120 + 67 + 23 - (3 * Math.sqrt(3)), 9], [35, 18.5 + 120 + 67 + 23 - (3 * Math.sqrt(3)), 9], [53, 18.5 + 120 + 67 + 23 - (3 * Math.sqrt(3)), 9]],
-    [[_0x, 18.5 + 120 + 67 + 23, 0], [15, 18.5 + 120 + 67 + 23, 0], [35, 18.5 + 120 + 67 + 23, 0], [56, 18.5 + 120 + 67 + 23, 0]],
-    [0.3, 0.3, 0.3, 0.3]
-  ]
-  extSur2[1][1] = [
+  ], arc_3_0)
+
+  const arc_0_1: BezierSurfaceControlPoints = verticalStitch([
+    [[0, 18.5 + 120 + 20, 22.5], [15, 18.5 + 120 + 20, 22.5], [35, 18.5 + 120 + 20, 22.5], [40, 18.5 + 120 + 20, 22.5]],
+    [[0, 18.5 + 120 + 67, 13.5], [15, 18.5 + 120 + 67, 13.5], [35, 18.5 + 120 + 67, 13.5], [50, 18.5 + 120 + 67, 13.5]]
+  ], arc_0_0)
+  const arc_1_1: BezierSurfaceControlPoints = diagonalStitch([
     [[70, 15 + 120 + 20, 22.5], [67, 15 + 120 + 20, 22.5]],
     [[70, 17 + 120 + 67, 11.5], [82, 15 + 120 + 67, 10.5]]
-  ]
+  ], { top: arc_1_0, left: arc_0_1, diagonal: arc_0_0 })
+  // const arc_2_1: BezierSurfaceControlPoints = diagonalStitch({}, {top: arc_2_0, left: arc_1_1})
+  // const arc_3_1: BezierSurfaceControlPoints = {} as
+  // const arc_4_1: BezierSurfaceControlPoints = {} as
 
-  // const extSur = stitchQuadBezierSurfacesByTangent(
-  //   {
-  //     topLeft: extSur2[0][0],
-  //     topRight: extSur2[1][0],
-  //     bottomLeft: extSur2[0][1],
-  //     bottomRight: extSur2[1][1]
-  //   }
-  // )
+  const arc_0_2: BezierSurfaceControlPoints = verticalStitch([
+    [[0, 18.5 + 120 + 67 + 23 - (3 * Math.sqrt(3)), 9], [15, 18.5 + 120 + 67 + 23 - (3 * Math.sqrt(3)), 9], [35, 18.5 + 120 + 67 + 23 - (3 * Math.sqrt(3)), 9], [53, 18.5 + 120 + 67 + 23 - (3 * Math.sqrt(3)), 9]],
+    [[0, 18.5 + 120 + 67 + 23, 0], [15, 18.5 + 120 + 67 + 23, 0], [35, 18.5 + 120 + 67 + 23, 0], [56, 18.5 + 120 + 67 + 23, 0]],
+    [0.3, 0.3, 0.3, 0.3]
+  ], arc_0_1)
+  // const arc_1_2: BezierSurfaceControlPoints = diagonalStitch({}, {top: arc_1_1, left: arc_0_2})
+  // const arc_2_2: BezierSurfaceControlPoints = {}
+  // const arc_3_2: BezierSurfaceControlPoints = {}
+  // const arc_4_2: BezierSurfaceControlPoints = {}
+
+  const functionRowTopOffset = fromEdgeOffset({ edgeId: edgeId.top, distance: tempParams.outerMarginWidth })
+  const functionRowBottomOffset = fromEdgeOffset({ edgeId: edgeId.top, distance: tempParams.outerMarginWidth + tempParams.smallKeyHeight })
+
+  const nextFunctionKeyCut = (previousKey) => ({
+    ...previousKey.cut,
+    left: { ...previousKey.cut.left, distance: previousKey.cut.right.distance + tempParams.keyMarginWidth },
+    right: { ...previousKey.cut.left, distance: previousKey.cut.right.distance + tempParams.keyMarginWidth + tempParams.smallKeyWidth }
+  })
+
+  if (!tempParams.integratedNumpad) {
+    const leftArcSurface = {}
+    const rightArcSurface = mergeSurfaceByDistance([arc_0_0, arc_1_0, arc_2_0, arc_3_0, arc_4_0, arc_0_1, arc_0_2, arc_1_1])
+    const numpad = {}
+
+    scene.push(rightArcSurface
+      .map(s => drawSurface(s, { orientation: 'inward' }))
+      .map(s => colorize([Math.random(), Math.random(), Math.random()], s))
+    )
 
 
-  const stitch = (vars) => {
-    const averagePoint = (a: Vec3, b: Vec3) => (vec3.scale([0, 0, 0], vec3.add([0, 0, 0], a, b), 0.5))
-    const transpose = matrix => matrix[0].map((col, i) => matrix.map(row => row[i]))
+    // const f7: cutFrom(rightArcSurface, {
+    //   top: functionRowTopOffset,
+    //   bottom: functionRowBottomOffset,
+    //   left: fromEdgeNormal({ edgeId: edgeId.top, distance: keyOrigin }),
+    //   right: fromEdgeNormal({ edgeId: edgeId.top, distance: keyOrigin + tempParams.smallKeyWidth }),
+    // })
 
-    const result = [];
-    for (let i = 0; i < vars.length; i++) {
-      for (let j = 0; j < vars[i].length; j++) {
-        (result[i] = result[i] || [])
-        // first tile
-        if (i === 0 && j === 0) {
-          result[i][j] = vars[i][j]
-          continue
-        }
-        // stich horizontal
-        if (j === 0) {
-          const previous = result[i - 1][j]
-          const current = vars[i][j]
-          const getScale = row => {
-            if (vars[i][j][row][2] === undefined) {
-              return 1
-            }
-            return vars[i][j][row][2]
-          }
-          result[i][j] = [
-            joinBezierByTangent(previous[0], current[0], getScale(0)),
-            joinBezierByTangent(previous[1], current[1], getScale(1)),
-            joinBezierByTangent(previous[2], current[2], getScale(2)),
-            joinBezierByTangent(previous[3], current[3], getScale(3))
-          ]
-          continue
-        }
-        // stitch vertical
-        if (i === 0) {
-          const oneUp = result[i][j - 1];
-          const current = vars[i][j];
-          const byColumn = (c): BezierControlPoints => [oneUp[0][c], oneUp[1][c], oneUp[2][c], oneUp[3][c]]
-          const bottomLeftByColumn = (column): [Vec3, Vec3] => ([current[0][column], current[1][column]])
-          const getScale = (col): number => {
-            if (current[2] === undefined)
-              return 1
-            if (current[2][col] === undefined)
-              return 1
-            return current[2][col]
-          };
-          result[i][j] = transpose([
-            joinBezierByTangent(byColumn(0), bottomLeftByColumn(0), getScale(0)),
-            joinBezierByTangent(byColumn(1), bottomLeftByColumn(1), getScale(1)),
-            joinBezierByTangent(byColumn(2), bottomLeftByColumn(2), getScale(2)),
-            joinBezierByTangent(byColumn(3), bottomLeftByColumn(3), getScale(3))
-          ])
-          continue
-        }
+    // const f8: cutFrom(rightArcSurface, nextFunctionKeyCut(f7))
+    // const f9: cutFrom(rightArcSurface, nextFunctionKeyCut(f8))
+    // const f10: cutFrom(rightArcSurface, nextFunctionKeyCut(f9))
+    // const f11: cutFrom(rightArcSurface, nextFunctionKeyCut(f10))
+    // const f12: cutFrom(rightArcSurface, nextFunctionKeyCut(f11))
+    // const printScreen: cutFrom(rightArcSurface, nextFunctionKeyCut(f10))
+    // const screenLock: cutFrom(rightArcSurface, nextFunctionKeyCut(printScreen))
+    // const pause: cutFrom(rightArcSurface, nextFunctionKeyCut(screenLock))
+    // const calculator: cutFrom(rightArcSurface, nextFunctionKeyCut(pause))
+    // const functionSwitch: cutFrom(rightArcSurface, nextFunctionKeyCut(calculator))
+  } else {
+    const arc_5_0 = {}
+    const arc_5_1 = {}
+    const arc_5_2 = {}
 
-        // stitch diagonal
-        const upper = result[i][j - 1]
-        const left = result[i - 1][j]
-        const diagonal = result[i - 1][j - 1]
-        const current = vars[i][j]
-        result[i][j] = [
-          [diagonal[3][3], upper[3][1], upper[3][2], upper[3][3]],
-          [left[1][3], averagePoint(mirrorPointAroundCenter(left[1][2], left[1][3]), mirrorPointAroundCenter(upper[2][1], upper[3][1])), mirrorPointAroundCenter(upper[2][2], upper[3][2]), mirrorPointAroundCenter(upper[2][3], upper[3][3])],
-          [left[2][3], mirrorPointAroundCenter(left[2][2], left[2][3]), current[0][0], current[0][1]],
-          [left[3][3], mirrorPointAroundCenter(left[3][2], left[3][3]), current[1][0], current[1][1]],
-        ]
-
-      }
-    }
-    return result
+    const leftArcSurface = {}
+    const rightArcSurface = {}
   }
 
-  const stitchedSurface = stitch(extSur2);
 
-  // scene.push(colorize([0, 0, 1], generateExtrudedSurface(extSur[0][0], 0.2)))
-  // scene.push(colorize([1, 0, 1], generateExtrudedSurface(extSur[0][1], 0.2)))
-  // scene.push(colorize([1, 0, 0], generateExtrudedSurface(extSur[1][0], 0.2)))
-  // scene.push(colorize([0, 1, 0], generateExtrudedSurface(extSur[1][1], 0.2)))
-  for (let i = 0; i < stitchedSurface.length; i++) {
-    for (let j = 0; j < stitchedSurface[i].length; j++) {
-      if (stitchedSurface[i][j] === undefined)
-        continue
-      scene.push(colorize([Math.random(), Math.random(), Math.random()], generateExtrudedSurface(stitchedSurface[i][j], 2, { surfaceFidelity: 4 })))
-    }
-  }
-  // TODO: positive second trim is problematic..., as second trim cannot be absolute.
-  //  Suggestion: take a point on starting line on the trim point, take a normal oriented to the next line - the point where crossing occurs, will give us the new trim point
-  //  This should be done by "trim a b c d should be normal based"
-  // const mainBoard = generateExtrudedSurface(surface, 0.2, { trim: [0, 0, 0, 0], surfaceFidelity: 25 })
 
-  // const { Key_padding: keyPadding, Key_size: keySize, Key_small_size_multiplier: keySmallSizeMultiplier } = extendedParamsWithVariables
 
-  // const keys = [
-  //   generateExtrudedSurface(surface, [1, 1], { trim: [keyPadding, keyPadding + (keySize * keySmallSizeMultiplier), keyPadding, keySize], surfaceFidelity: 25, normalTrimRight: true }) as Geom3,
-  //   generateExtrudedSurface(surface, [1, 1], { trim: [keyPadding, keyPadding + (keySize * keySmallSizeMultiplier), (1 * keyPadding) + keySize, (1 * keyPadding) + (2 * keySize)], surfaceFidelity: 25, normalTrimRight: true, normalTrimLeft: true }) as Geom3,
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  // // // const keyboardArc = blockKeyboardArc(extendedParamsWithVariables)
+  // // // scene.push(
+  // // //   keyboardArc,
+  // // //   mirror({ normal: [1, 0, 0] }, keyboardArc)
+  // // // )
+
+  // // // scene.push(
+  // // //   translate([params.Arc_width + params.Key_padding, 0, 0], blockStraight(extendedParamsWithVariables))
+  // // // )
+
+  // // // const arc = arcSurface(extendedParamsWithVariables)
+  // // // scene.push(
+  // // //   arc,
+  // // //   mirror({ normal: [1, 0, 0] }, arc)
+  // // // )
+  // // // // TODO: Add join by tangent surface
+  // // // //  Target support: 5x3 patches
+  // const surface: BezierSurfaceControlPoints = [
+  //   [[0, 0, 0], [5, -5, 0], [15, -5, 0], [20, 0, 0]],
+  //   [[0, 5, 0], [5, 5, 5], [15, 5, -15], [20, 5, 0]],
+  //   [[0, 15, 0], [5, 15, -10], [15, 15, 10], [20, 15, 0]],
+  //   [[-10, 40, 0], [5, 45, 0], [15, 45, 0], [20, 40, 0]]
   // ]
 
-  // scene.push(keys.map(a => colorize([1, 0, 0], a)))
+  // const transpose = matrix => {
+  //   let arr = [];
+  //   for (let i = 0; i < matrix.length; i++) {
+  //     arr.push([])
+  //     for (let j = 0; j < matrix.length; j++) {
+  //       arr[i].push(matrix[j][i])
+  //     }
+  //   }
+  //   return arr
+  // }
 
-  // scene.push(subtract([
-  //   mainBoard as Geom3,
-  //   ...keys
-  // ]))
+  // const stitchQuadBezierSurfacesByTangent = (data: { topLeft: any, topRight: any, bottomLeft: any, bottomRight: any }) => {
+  //   const { topLeft, topRight, bottomLeft, bottomRight } = data
+
+  //   const controlPointsByColumn = (column): BezierControlPoints => ([topLeft[0][column], topLeft[1][column], topLeft[2][column], topLeft[3][column]])
+  //   const bottomLeftByColumn = (column): [Vec3, Vec3] => ([bottomLeft[0][column], bottomLeft[1][column]])
+  //   const averagePoint = (a: Vec3, b: Vec3) => (vec3.scale([0, 0, 0], vec3.add([0, 0, 0], a, b), 0.5))
+  //   const transpose = matrix => matrix[0].map((col, i) => matrix.map(row => row[i]))
+  //   const generatedTopRight = [
+  //     joinBezierByTangent(topLeft[0], topRight[0]),
+  //     joinBezierByTangent(topLeft[1], topRight[1]),
+  //     joinBezierByTangent(topLeft[2], topRight[2]),
+  //     joinBezierByTangent(topLeft[3], topRight[3])
+  //   ]
+  //   const generatedBottomLeft: [BezierControlPoints, BezierControlPoints, BezierControlPoints, BezierControlPoints] =
+  //     transpose([
+  //       joinBezierByTangent(controlPointsByColumn(0), bottomLeftByColumn(0)),
+  //       joinBezierByTangent(controlPointsByColumn(1), bottomLeftByColumn(1)),
+  //       joinBezierByTangent(controlPointsByColumn(2), bottomLeftByColumn(2)),
+  //       joinBezierByTangent(controlPointsByColumn(3), bottomLeftByColumn(3)),
+  //     ])
+  //   const extSur = [
+  //     [
+  //       topLeft,
+  //       generatedTopRight
+  //     ],
+  //     [
+  //       generatedBottomLeft,
+  //       [
+  //         [topLeft[3][3], generatedTopRight[3][1], generatedTopRight[3][2], generatedTopRight[3][3]],
+  //         [generatedBottomLeft[1][3], averagePoint(mirrorPointAroundCenter(generatedBottomLeft[1][2], generatedBottomLeft[1][3]), mirrorPointAroundCenter(generatedTopRight[2][1], generatedTopRight[3][1])), mirrorPointAroundCenter(generatedTopRight[2][2], generatedTopRight[3][2]), mirrorPointAroundCenter(generatedTopRight[2][3], generatedTopRight[3][3])],
+  //         [generatedBottomLeft[2][3], mirrorPointAroundCenter(generatedBottomLeft[2][2], generatedBottomLeft[2][3]), bottomRight[0][0], bottomRight[0][1]],
+  //         [generatedBottomLeft[3][3], mirrorPointAroundCenter(generatedBottomLeft[3][2], generatedBottomLeft[3][3]), bottomRight[1][0], bottomRight[1][1]],
+  //       ]
+  //     ]
+  //   ]
+
+  //   return extSur
+
+  // }
+
+  // var _0x = 0;
+
+  // const extSur2 = [];
+  // extSur2[0] = [];
+  // extSur2[1] = [];
+  // extSur2[2] = [];
+  // extSur2[3] = [];
+  // extSur2[4] = [];
+  // extSur2[5] = [];
+  // extSur2[0][0] = [
+  //   [[_0x, 18.5, 21.25], [3, 18.5, 21.25], [5, 18.2, 21.], [8, 18, 21]],
+  //   [[_0x, 18.5 + 80, 21.25], [2, 18.5 + 80, 21], [20, 18.5 + 80, 21], [24, 18.5 + 80, 21.25]],
+  //   [[_0x, 18.5 + 120 - 20, 22.5], [10, 18.5 + 120 - 20, 22.25], [24, 18.5 + 120 - 20, 22.25], [28, 134.5 - 20, 22.5]],
+  //   [[_0x, 18.5 + 120, 22.5], [12, 18 + 120, 22.25], [25, 18.5 + 117.5, 22.25], [33.85, 134.5, 22.5]]
+  // ]
+  // extSur2[1][0] = [
+  //   [[25, 15, 18.5], [27, 14.5, 18.2]],
+  //   [[32, 14.5 + 80, 18.2], [46, 14.5 + 80, 18.2]],
+  //   [[40, 14.5 + 100, 23], [51, 130 - 20, 18.2], 0.3],
+  //   [[46, 12.5 + 120, 20.5], [56.85, 130, 18.2], 0.3]
+  // ]
+  // extSur2[2][0] = [
+  //   [[50, 10, 14], [64, 7.7, 10.5]],
+  //   [[50, 8 + 80, 10.5], [76, 7.7 + 80, 10.5]],
+  //   [[60, 110, 10.5], [84.4, 123.5 - 10, 10.5]],
+  //   [[70, 127, 15], [84.4, 123.5, 10.5]]
+  // ]
+  // extSur2[3][0] = [
+  //   [[95, 4, 4.5], [100.8, 3.5, 3.8]],
+  //   [[95, 4 + 80, 3.8], [110, 3.5 + 80, 3.8]],
+  //   [[105, 4 + 100, 3.8], [117, 117 - 20, 3.8]],
+  //   [[95, 121, 8], [117, 117, 3.8]]
+  // ]
+  // extSur2[4][0] = [
+  //   [[120, 2, 0], [160, 0, 0]],
+  //   [[120, 2 + 80, 0], [160, 0 + 80, 0]],
+  //   [[120, 113.85 - 10, 0], [160, 113.85 - 10, 0]],
+  //   [[140, 113.85, 0], [160, 113.85, 0]]
+  // ]
+  // extSur2[0][1] = [
+  //   [[_0x, 18.5 + 120 + 20, 22.5], [15, 18.5 + 120 + 20, 22.5], [35, 18.5 + 120 + 20, 22.5], [40, 18.5 + 120 + 20, 22.5]],
+  //   [[_0x, 18.5 + 120 + 67, 13.5], [15, 18.5 + 120 + 67, 13.5], [35, 18.5 + 120 + 67, 13.5], [50, 18.5 + 120 + 67, 13.5]]
+  // ]
+  // extSur2[0][2] = [
+  //   [[_0x, 18.5 + 120 + 67 + 23 - (3 * Math.sqrt(3)), 9], [15, 18.5 + 120 + 67 + 23 - (3 * Math.sqrt(3)), 9], [35, 18.5 + 120 + 67 + 23 - (3 * Math.sqrt(3)), 9], [53, 18.5 + 120 + 67 + 23 - (3 * Math.sqrt(3)), 9]],
+  //   [[_0x, 18.5 + 120 + 67 + 23, 0], [15, 18.5 + 120 + 67 + 23, 0], [35, 18.5 + 120 + 67 + 23, 0], [56, 18.5 + 120 + 67 + 23, 0]],
+  //   [0.3, 0.3, 0.3, 0.3]
+  // ]
+  // extSur2[1][1] = [
+  //   [[70, 15 + 120 + 20, 22.5], [67, 15 + 120 + 20, 22.5]],
+  //   [[70, 17 + 120 + 67, 11.5], [82, 15 + 120 + 67, 10.5]]
+  // ]
+
+  // // const extSur = stitchQuadBezierSurfacesByTangent(
+  // //   {
+  // //     topLeft: extSur2[0][0],
+  // //     topRight: extSur2[1][0],
+  // //     bottomLeft: extSur2[0][1],
+  // //     bottomRight: extSur2[1][1]
+  // //   }
+  // // )
+
+
+  // const stitch = (vars) => {
+  //   const averagePoint = (a: Vec3, b: Vec3) => (vec3.scale([0, 0, 0], vec3.add([0, 0, 0], a, b), 0.5))
+  //   const transpose = matrix => matrix[0].map((col, i) => matrix.map(row => row[i]))
+
+  //   const result = [];
+  //   for (let i = 0; i < vars.length; i++) {
+  //     for (let j = 0; j < vars[i].length; j++) {
+  //       (result[i] = result[i] || [])
+  //       // first tile
+  //       if (i === 0 && j === 0) {
+  //         result[i][j] = vars[i][j]
+  //         continue
+  //       }
+  //       // stich horizontal
+  //       if (j === 0) {
+  //         const previous = result[i - 1][j]
+  //         const current = vars[i][j]
+  //         const getScale = row => {
+  //           if (vars[i][j][row][2] === undefined) {
+  //             return 1
+  //           }
+  //           return vars[i][j][row][2]
+  //         }
+  //         result[i][j] = [
+  //           joinBezierByTangent(previous[0], current[0], getScale(0)),
+  //           joinBezierByTangent(previous[1], current[1], getScale(1)),
+  //           joinBezierByTangent(previous[2], current[2], getScale(2)),
+  //           joinBezierByTangent(previous[3], current[3], getScale(3))
+  //         ]
+  //         continue
+  //       }
+  //       // stitch vertical
+  //       if (i === 0) {
+  //         const oneUp = result[i][j - 1];
+  //         const current = vars[i][j];
+  //         const byColumn = (c): BezierControlPoints => [oneUp[0][c], oneUp[1][c], oneUp[2][c], oneUp[3][c]]
+  //         const bottomLeftByColumn = (column): [Vec3, Vec3] => ([current[0][column], current[1][column]])
+  //         const getScale = (col): number => {
+  //           if (current[2] === undefined)
+  //             return 1
+  //           if (current[2][col] === undefined)
+  //             return 1
+  //           return current[2][col]
+  //         };
+  //         result[i][j] = transpose([
+  //           joinBezierByTangent(byColumn(0), bottomLeftByColumn(0), getScale(0)),
+  //           joinBezierByTangent(byColumn(1), bottomLeftByColumn(1), getScale(1)),
+  //           joinBezierByTangent(byColumn(2), bottomLeftByColumn(2), getScale(2)),
+  //           joinBezierByTangent(byColumn(3), bottomLeftByColumn(3), getScale(3))
+  //         ])
+  //         continue
+  //       }
+
+  //       // stitch diagonal
+  //       const upper = result[i][j - 1]
+  //       const left = result[i - 1][j]
+  //       const diagonal = result[i - 1][j - 1]
+  //       const current = vars[i][j]
+  //       result[i][j] = [
+  //         [diagonal[3][3], upper[3][1], upper[3][2], upper[3][3]],
+  //         [left[1][3], averagePoint(mirrorPointAroundCenter(left[1][2], left[1][3]), mirrorPointAroundCenter(upper[2][1], upper[3][1])), mirrorPointAroundCenter(upper[2][2], upper[3][2]), mirrorPointAroundCenter(upper[2][3], upper[3][3])],
+  //         [left[2][3], mirrorPointAroundCenter(left[2][2], left[2][3]), current[0][0], current[0][1]],
+  //         [left[3][3], mirrorPointAroundCenter(left[3][2], left[3][3]), current[1][0], current[1][1]],
+  //       ]
+
+  //     }
+  //   }
+  //   return result
+  // }
+
+  // const stitchedSurface = stitch(extSur2);
+
+  // // scene.push(colorize([0, 0, 1], generateExtrudedSurface(extSur[0][0], 0.2)))
+  // // scene.push(colorize([1, 0, 1], generateExtrudedSurface(extSur[0][1], 0.2)))
+  // // scene.push(colorize([1, 0, 0], generateExtrudedSurface(extSur[1][0], 0.2)))
+  // // scene.push(colorize([0, 1, 0], generateExtrudedSurface(extSur[1][1], 0.2)))
+  // for (let i = 0; i < stitchedSurface.length; i++) {
+  //   for (let j = 0; j < stitchedSurface[i].length; j++) {
+  //     if (stitchedSurface[i][j] === undefined)
+  //       continue
+  //     scene.push(colorize([Math.random(), Math.random(), Math.random()], generateExtrudedSurface(stitchedSurface[i][j], 2, { surfaceFidelity: 3 })))
+  //   }
+  // }
+  // // TODO: positive second trim is problematic..., as second trim cannot be absolute.
+  // //  Suggestion: take a point on starting line on the trim point, take a normal oriented to the next line - the point where crossing occurs, will give us the new trim point
+  // //  This should be done by "trim a b c d should be normal based"
+  // // const mainBoard = generateExtrudedSurface(surface, 0.2, { trim: [0, 0, 0, 0], surfaceFidelity: 25 })
+
+  // // const { Key_padding: keyPadding, Key_size: keySize, Key_small_size_multiplier: keySmallSizeMultiplier } = extendedParamsWithVariables
+
+  // // const keys = [
+  // //   generateExtrudedSurface(surface, [1, 1], { trim: [keyPadding, keyPadding + (keySize * keySmallSizeMultiplier), keyPadding, keySize], surfaceFidelity: 25, normalTrimRight: true }) as Geom3,
+  // //   generateExtrudedSurface(surface, [1, 1], { trim: [keyPadding, keyPadding + (keySize * keySmallSizeMultiplier), (1 * keyPadding) + keySize, (1 * keyPadding) + (2 * keySize)], surfaceFidelity: 25, normalTrimRight: true, normalTrimLeft: true }) as Geom3,
+  // // ]
+
+  // // scene.push(keys.map(a => colorize([1, 0, 0], a)))
+
+  // // scene.push(subtract([
+  // //   mainBoard as Geom3,
+  // //   ...keys
+  // // ]))
 
   scene.push(additionalGeometry)
 
   return mirror({ normal: [1, 0, 0] }, scene)
 }
 
-const entrypoint: Entrypoint = {
-  main,
-  getParameterDefinitions
-}
-
-module.exports = entrypoint
+export default { main, getParameterDefinitions }

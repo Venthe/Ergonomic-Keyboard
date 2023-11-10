@@ -12,3 +12,5 @@ export const unit = (v1: Vec3): Vec3 => scale(v1, 1/vec3.length(v1))
 
 export const dot = (v1: Vec3, v2: Vec3): number => vec3.dot(v1, v2)
 export const distance = vec3.distance
+
+export const average = (a: Vec3, b: Vec3) => scale(add(a,b), 0.5)

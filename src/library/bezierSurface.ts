@@ -5,7 +5,7 @@ import { Vec3 } from '@jscad/modeling/src/maths/vec3'
 import RecursiveArray from '@jscad/modeling/src/utils/recursiveArray'
 import { Geometry } from '@jscad/modeling/src/geometries/types'
 import { colorize, RGB, RGBA } from '@jscad/modeling/src/colors'
-import { add, cross, scale, subtract } from './vector3'
+import { add, cross, normalize, scale, subtract } from './vector3'
 import { polyhedron, sphere } from '@jscad/modeling/src/primitives'
 import { BezierSurfaceControlPoints, FaceIndices, Surface, SurfacePoint } from './surface'
 import { translate } from '@jscad/modeling/src/operations/transforms'
@@ -28,7 +28,7 @@ function mapIndicesToSingleFace(allOrigins: Vec3[], quad: QuadIndices): QuadFace
   const v3: Vec3 = allOrigins[quad[0][2]]
   const v4: Vec3 = allOrigins[quad[1][2]]
 
-  const calculateNormal = (c: Vec3, a: Vec3, b: Vec3): Vec3 => cross(subtract(b, a), subtract(c, a))
+  const calculateNormal = (c: Vec3, a: Vec3, b: Vec3): Vec3 => normalize(cross(subtract(b, a), subtract(c, a)))
   const n1 = calculateNormal(v3, v1, v2)
   const n2 = calculateNormal(v1, v2, v4)
   const n3 = calculateNormal(v2, v4, v3)
@@ -82,18 +82,18 @@ function generateQuadFaces(contextsForGeneratedLines: FrameContext[], pointsPerC
 export const generateSurface = (
   surfaceControlPoints: BezierSurfaceControlPoints,
   {
-    trim = [0, 0, 0, 0],
+    // trim = [0, 0, 0, 0],
     surfaceFidelity = 10,
-    extrude = 0
+    // extrude = 0
   }: {
     surfaceFidelity?: number,
-    trim?: [number, number, number, number],
-    extrude?: number
+    // trim?: [number, number, number, number],
+    // extrude?: number
   } = {}
 ): Surface<SurfacePoint> & { horizontalPoints: [Frame, Frame] } => {
-  const contextsForOriginalControlPoints: FrameContext[] = getFramesForOriginalControlPoints(surfaceControlPoints, surfaceFidelity, { trim: [trim[0], trim[1]] })
+  const contextsForOriginalControlPoints: FrameContext[] = getFramesForOriginalControlPoints(surfaceControlPoints, surfaceFidelity) // , { trim: [trim[0], trim[1]] }
   const pointsPerContext = calculatePointsPerContext(contextsForOriginalControlPoints)
-  const contextsForGeneratedLines = generateIntermediateFrames(contextsForOriginalControlPoints, surfaceFidelity, { trim: [trim[2], trim[3]] })
+  const contextsForGeneratedLines = generateIntermediateFrames(contextsForOriginalControlPoints, surfaceFidelity) // , { trim: [trim[2], trim[3]] }
   const uniqueOrigins: Vec3[] = getUniqueOriginsFromContext(contextsForGeneratedLines)
   const quadFaces: QuadFace[] = generateQuadFaces(contextsForGeneratedLines, pointsPerContext, uniqueOrigins)
 
@@ -110,7 +110,7 @@ export const generateSurface = (
 
   return {
     ...result,
-    points: result.points.map(p => ({ ...p, origin: moveOriginByExtrusionSize(p.origin, p.normal, extrude) })),
+    points: result.points, // s.map(p => ({ ...p, origin: moveOriginByExtrusionSize(p.origin, p.normal, extrude) })),
     horizontalPoints: [contextsForGeneratedLines[0].frames[0], contextsForGeneratedLines[0].frames[surfaceFidelity]]
   }
 }
