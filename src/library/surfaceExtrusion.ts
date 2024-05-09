@@ -1,11 +1,8 @@
-import { colorize } from '@jscad/modeling/src/colors'
 import { Geom3, Geometry } from '@jscad/modeling/src/geometries/types'
 import { Vec3 } from '@jscad/modeling/src/maths/vec3'
 import { subtract, union } from '@jscad/modeling/src/operations/booleans'
-import { circle, polygon, polyhedron, sphere } from '@jscad/modeling/src/primitives'
+import { polyhedron } from '@jscad/modeling/src/primitives'
 import RecursiveArray from '@jscad/modeling/src/utils/recursiveArray'
-import { json } from 'stream/consumers'
-import { additionalGeometry } from '../keyboard'
 import { drawSurface, generateSurface } from './bezierSurface'
 import { Frame } from './Frame'
 import { BezierSurfaceControlPoints, FaceIndices, Surface, SurfacePoint } from './surface'
@@ -61,13 +58,13 @@ const concatSurface = (originalSurface: Surface<SurfacePoint>, extrudedSurface: 
 
   const borderFaces: any[] = []
   for (let i = 0; i < orderedIdsOfLongestEdgePoints.length; i++) {
-    let f1 = orderedIdsOfLongestEdgePoints[i].index
-    let f2 = (orderedIdsOfLongestEdgePoints[i + 1] || orderedIdsOfLongestEdgePoints[0]).index
-    let f3 = orderedIdsOfLongestEdgePoints[i].originalPointIndex
-    let f4 = (orderedIdsOfLongestEdgePoints[i + 1] || orderedIdsOfLongestEdgePoints[0]).originalPointIndex
+    const f1 = orderedIdsOfLongestEdgePoints[i].index
+    const f2 = (orderedIdsOfLongestEdgePoints[i + 1] || orderedIdsOfLongestEdgePoints[0]).index
+    const f3 = orderedIdsOfLongestEdgePoints[i].originalPointIndex
+    const f4 = (orderedIdsOfLongestEdgePoints[i + 1] || orderedIdsOfLongestEdgePoints[0]).originalPointIndex
 
-    let face1 = [f2, f1, f3]
-    let face2 = [f2, f3, f4]
+    const face1 = [f2, f1, f3]
+    const face2 = [f2, f3, f4]
     borderFaces.push(face1, face2)
   }
 

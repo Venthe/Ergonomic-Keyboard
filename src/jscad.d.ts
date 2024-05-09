@@ -10,7 +10,7 @@ interface ParameterValue<T> {
 
 export type ParamObject = any
 
-export type MainFunction = (params: ParamObject) => any[]
+export type MainFunction = (params: ParamObject) => RecursiveArray<Geometry> | Geometry
 
 export interface Entrypoint {
   main: MainFunction
@@ -29,5 +29,7 @@ export interface NumberParameter extends ParameterValue<number>, Parameter<'numb
 export type OtherParameter = {} & Parameter & any
 
 export type ParameterDefinitions = Array<
-GroupParameter | NumberParameter | OtherParameter
+  GroupParameter | NumberParameter | OtherParameter
 >
+
+export type ObjectTree = Geometry | RecursiveArray<Geometry>

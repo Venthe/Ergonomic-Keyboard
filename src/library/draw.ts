@@ -4,10 +4,10 @@ import { Vec3 } from '@jscad/modeling/src/maths/vec3'
 import hulls from '@jscad/modeling/src/operations/hulls'
 import { sphere } from '@jscad/modeling/src/primitives'
 import RecursiveArray from '@jscad/modeling/src/utils/recursiveArray'
-import { ExtendedParams } from '../keyboardTypes'
 import { BezierControlPoints, drawBezierControlPoints, weightedSteps } from './bezier'
 import { FrameContext } from './Frame'
 import { add, scale } from './vector3'
+import { ExtendedParams } from '../design/design.parameters'
 
 export const drawLine = (a: Vec3, b: Vec3, size = 0.5): Geometry => {
   return hulls.hull(

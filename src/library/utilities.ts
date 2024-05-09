@@ -4,11 +4,12 @@ import { Vec3 } from '@jscad/modeling/src/maths/types'
 import { sphere } from '@jscad/modeling/src/primitives'
 import { hulls } from '@jscad/modeling/src'
 import { Geometry } from '@jscad/modeling/src/geometries/types'
-import { ExtendedParams } from '../keyboardTypes'
 import RecursiveArray from '@jscad/modeling/src/utils/recursiveArray'
 import * as vec3 from '@jscad/modeling/src/maths/vec3'
 import { range } from './collections'
 import { colorize } from '@jscad/modeling/src/colors'
+import { ExtendedParams } from '../design/design.parameters'
+import { ObjectTree } from '../jscad'
 
 export function constructionLine({ start, stop, label }: { start: Vec3, stop: Vec3, label?: string }, params: ExtendedParams): RecursiveArray<Geometry> | Geometry {
   if (!params.Enable_debug) {
@@ -27,7 +28,7 @@ export function constructionLine({ start, stop, label }: { start: Vec3, stop: Ve
 
   // console.log(points)
 
-  const geometry = []
+  const geometry: ObjectTree = []
 
   for (let s = 0; s < points.length; s++) {
     if (s % 2 !== 0) {

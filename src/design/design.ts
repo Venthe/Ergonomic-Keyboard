@@ -1,54 +1,28 @@
 import { colorize } from '@jscad/modeling/src/colors'
 import { Geom3, Geometry } from '@jscad/modeling/src/geometries/types'
-import vec3, { Vec3 } from '@jscad/modeling/src/maths/vec3'
-import { subtract } from '@jscad/modeling/src/operations/booleans'
+import { Vec3 } from '@jscad/modeling/src/maths/vec3'
 import { mirror, translate } from '@jscad/modeling/src/operations/transforms'
-import { sphere } from '@jscad/modeling/src/primitives'
 import RecursiveArray from '@jscad/modeling/src/utils/recursiveArray'
-import { Entrypoint, MainFunction, ParameterDefinitions } from './jscad'
-import { ExtendedParams, Params, Variables } from './keyboardTypes'
-import { BezierControlPoints, joinBezierByTangent, mirrorPointAroundCenter } from './library/bezier'
-import { drawSurface, generateSurface } from './library/bezierSurface'
-import { drawContinuousPoints, drawPoints } from './library/draw'
-import { FrameContext } from './library/Frame'
-import { BezierSurfaceControlPoints } from './library/surface'
-import { generateExtrudedSurface } from './library/surfaceExtrusion'
-import { constructionLine } from './library/utilities'
-import { Schema } from 'inspector'
-import { diagonalStitch, horizontalStitch, mergeSurfaceByDistance, verticalStitch } from './library/stitching'
+import { MainFunction, ObjectTree } from '../jscad'
+import { BezierControlPoints, joinBezierByTangent } from '../library/bezier'
+import { drawSurface, generateSurface } from '../library/bezierSurface'
+import { drawContinuousPoints, drawPoints } from '../library/draw'
+import { FrameContext } from '../library/Frame'
+import { BezierSurfaceControlPoints } from '../library/surface'
+import { constructionLine } from '../library/utilities'
+import { diagonalStitch, horizontalStitch, mergeSurfaceByDistance, verticalStitch } from '../library/stitching'
+import { DesignParameters, ExtendedParams, deriveDesignParameters } from './design.parameters'
+import { cube, sphere } from '@jscad/modeling/src/primitives'
+import { AddObject } from '../utilities/useScene'
+
+export type SceneManipulation = {
+  addObject: AddObject
+  addDebugObject: AddObject
+}
 
 export const additionalGeometry: RecursiveArray<Geometry | Geom3> = []
 
-const getParameterDefinitions = (): ParameterDefinitions => [
-  { name: 'keys', type: 'group', caption: 'Keys' },
-  { name: 'Key_padding', type: 'number', initial: 4, min: 0, step: 1, max: 6, caption: 'Distance between keys' },
-  { name: 'Key_size', type: 'number', initial: 14.75, min: 4, step: 0.25, max: 20, caption: ' Regular key size' },
-  { name: 'Keyboard_offset', type: 'number', initial: 6, min: 0, step: 1, max: 8 },
-  { name: 'Key_small_size_multiplier', type: 'number', initial: 0.6, min: 0.5, step: 0.1, max: 1 },
-
-  { name: 'ergonomic', type: 'group', caption: 'Keyboard (Ergonomic)' },
-  { name: 'Keyboard_depth_mult', caption: 'How deeper should keyboard be in the middle?', type: 'number', initial: 1.05, min: 1, step: 0.01, max: 1.2 },
-  { name: 'Keyboard_arc_origin', caption: 'How deep should keyboard be?', type: 'Vec3', initial: [0, 18.5, 21.25] },
-  { name: 'Keyboard_wing_angle', caption: 'How steep keyboard angle should be?', type: 'number', initial: 12.5, min: 0, step: 0.5, max: 45 },
-  { name: 'Keyboard_wing_angle_origin_offset', caption: 'Where the angle of keyboard wing should start', type: 'number', initial: -18, min: -20, step: 0.5, max: 20 },
-  { name: 'Arc_height_max', type: 'number', initial: 22.5, min: 0, max: 30 },
-  { name: 'Arc_width', type: 'number', initial: 160 },
-
-  { name: 'debug', type: 'group', caption: 'Debug' },
-  { name: 'Enable_debug', caption: 'Enable all debug methods of showing points', type: 'boolean', initial: true },
-  { name: 'Debug_point_base_size', caption: 'How large a base point should be?', type: 'number', initial: 1 }
-]
-
-const variables: (params: Params) => Variables = (params) =>
-  ((keySmallSize: number): Variables => ({
-    // Origin for the sketch
-    origin: [0, 0, 0],
-    keySmallSize,
-    // _v_keyboard_wing_angle_origin=[0, Keyboard_wing_angle_origin_offset, 0];
-    baseKeyboardHeight: params.Keyboard_offset * 2 + 5 * params.Key_size + 5 * params.Key_padding + keySmallSize
-  }))(params.Key_size * params.Key_small_size_multiplier)
-
-const blockKeyboardArc = (params: ExtendedParams): RecursiveArray<Geometry> | Geometry => {
+const blockKeyboardArc = (params: ExtendedParams): ObjectTree => {
   // Arc origin
   const keyboardArcEnd: Vec3 = [params.Arc_width, 0, 0]
   const keyboardArcEnd2: Vec3 = [params.Arc_width, params.baseKeyboardHeight, 0]
@@ -66,8 +40,8 @@ const blockKeyboardArc = (params: ExtendedParams): RecursiveArray<Geometry> | Ge
 }
 // const draw_top_cover = (params) => { }
 
-function blockStraight(params: ExtendedParams): RecursiveArray<Geometry> | Geometry {
-  const result: RecursiveArray<Geometry> | Geometry = []
+function blockStraight(params: ExtendedParams): ObjectTree {
+  const result: ObjectTree = []
 
   const totalArrowBlockWidth = params.Key_size * 3 + params.Key_padding * 2
   result.push(
@@ -117,8 +91,8 @@ function blockStraight(params: ExtendedParams): RecursiveArray<Geometry> | Geome
   return result
 }
 
-function arcSurface(params: ExtendedParams): RecursiveArray<Geometry> | Geometry {
-  const result: RecursiveArray<Geometry> | Geometry = []
+function arcSurface(params: ExtendedParams): ObjectTree {
+  const result: ObjectTree = []
 
   const bezierSteps = 10
 
@@ -266,9 +240,9 @@ function arcSurface(params: ExtendedParams): RecursiveArray<Geometry> | Geometry
   return result
 }
 
-const main: MainFunction = (params: Params) => {
-  const scene: RecursiveArray<Geometry> | Geometry = []
-  const extendedParamsWithVariables: ExtendedParams = { ...params, ...variables(params) }
+export const _generateDesign: MainFunction = (params: DesignParameters) => {
+  const scene: ObjectTree = []
+  const extendedParamsWithVariables: ExtendedParams = deriveDesignParameters(params)
 
   if (params.Enable_debug) { console.debug('Parameters:', extendedParamsWithVariables) }
 
@@ -654,4 +628,79 @@ const main: MainFunction = (params: Params) => {
   return mirror({ normal: [1, 0, 0] }, scene)
 }
 
-export default { main, getParameterDefinitions }
+const prepareSurfacePatches = (): Record<string, BezierSurfaceControlPoints> => {
+  const arc_0_0: BezierSurfaceControlPoints = [
+    [[0, 18.5, 21.25], [3, 18.5, 21.25], [5, 18.2, 21.], [8, 18, 21]],
+    [[0, 18.5 + 80, 21.25], [2, 18.5 + 80, 21], [20, 18.5 + 80, 21], [24, 18.5 + 80, 21.25]],
+    [[0, 18.5 + 120 - 20, 22.5], [10, 18.5 + 120 - 20, 22.25], [24, 18.5 + 120 - 20, 22.25], [28, 134.5 - 20, 22.5]],
+    [[0, 18.5 + 120, 22.5], [12, 18 + 120, 22.25], [25, 18.5 + 117.5, 22.25], [33.85, 134.5, 22.5]]
+  ]
+  const arc_1_0: BezierSurfaceControlPoints = horizontalStitch([
+    [[25, 15, 18.5], [27, 14.5, 18.2]],
+    [[32, 14.5 + 80, 18.2], [46, 14.5 + 80, 18.2]],
+    [[40, 14.5 + 100, 23], [51, 130 - 20, 18.2], 0.3],
+    [[46, 12.5 + 120, 20.5], [56.85, 130, 18.2], 0.3]
+  ], arc_0_0)
+
+  const arc_2_0: BezierSurfaceControlPoints = horizontalStitch([
+    [[50, 10, 14], [64, 7.7, 10.5]],
+    [[50, 8 + 80, 10.5], [76, 7.7 + 80, 10.5]],
+    [[60, 110, 10.5], [84.4, 123.5 - 10, 10.5]],
+    [[70, 127, 15], [84.4, 123.5, 10.5]]
+  ], arc_1_0)
+
+  const arc_3_0: BezierSurfaceControlPoints = horizontalStitch([
+    [[95, 4, 4.5], [100.8, 3.5, 3.8]],
+    [[95, 4 + 80, 3.8], [110, 3.5 + 80, 3.8]],
+    [[105, 4 + 100, 3.8], [117, 117 - 20, 3.8]],
+    [[95, 121, 8], [117, 117, 3.8]]
+  ], arc_2_0)
+  const arc_4_0: BezierSurfaceControlPoints = horizontalStitch([
+    [[120, 2, 0], [160, 0, 0]],
+    [[120, 2 + 80, 0], [160, 0 + 80, 0]],
+    [[120, 113.85 - 10, 0], [160, 113.85 - 10, 0]],
+    [[140, 113.85, 0], [160, 113.85, 0]]
+  ], arc_3_0)
+
+  const arc_0_1: BezierSurfaceControlPoints = verticalStitch([
+    [[0, 18.5 + 120 + 20, 22.5], [15, 18.5 + 120 + 20, 22.5], [35, 18.5 + 120 + 20, 22.5], [40, 18.5 + 120 + 20, 22.5]],
+    [[0, 18.5 + 120 + 67, 13.5], [15, 18.5 + 120 + 67, 13.5], [35, 18.5 + 120 + 67, 13.5], [50, 18.5 + 120 + 67, 13.5]]
+  ], arc_0_0)
+
+  const arc_1_1: BezierSurfaceControlPoints = diagonalStitch([
+    [[70, 15 + 120 + 20, 22.5], [67, 15 + 120 + 20, 22.5]],
+    [[70, 17 + 120 + 67, 11.5], [82, 15 + 120 + 67, 10.5]]
+  ], { top: arc_1_0, left: arc_0_1, diagonal: arc_0_0 })
+
+  // const arc_2_1: BezierSurfaceControlPoints = diagonalStitch({}, {top: arc_2_0, left: arc_1_1})
+  // const arc_3_1: BezierSurfaceControlPoints = {} as
+  // const arc_4_1: BezierSurfaceControlPoints = {} as
+
+  const arc_0_2: BezierSurfaceControlPoints = verticalStitch([
+    [[0, 18.5 + 120 + 67 + 23 - (3 * Math.sqrt(3)), 9], [15, 18.5 + 120 + 67 + 23 - (3 * Math.sqrt(3)), 9], [35, 18.5 + 120 + 67 + 23 - (3 * Math.sqrt(3)), 9], [53, 18.5 + 120 + 67 + 23 - (3 * Math.sqrt(3)), 9]],
+    [[0, 18.5 + 120 + 67 + 23, 0], [15, 18.5 + 120 + 67 + 23, 0], [35, 18.5 + 120 + 67 + 23, 0], [56, 18.5 + 120 + 67 + 23, 0]],
+    [0.3, 0.3, 0.3, 0.3]
+  ], arc_0_1)
+
+  // const arc_1_2: BezierSurfaceControlPoints = diagonalStitch({}, {top: arc_1_1, left: arc_0_2})
+  // const arc_2_2: BezierSurfaceControlPoints = {}
+  // const arc_3_2: BezierSurfaceControlPoints = {}
+  // const arc_4_2: BezierSurfaceControlPoints = {}
+
+  return {
+    ...{arc_0_0, arc_0_1, arc_0_2},
+    ...{arc_1_0, arc_1_1},
+    ...{arc_2_0},
+    ...{arc_3_0}
+  }
+}
+
+export const design = ({ addObject, addDebugObject }: SceneManipulation) => {
+  const surfacePatches = prepareSurfacePatches()
+
+  Object.values(surfacePatches)
+    .map(patch => generateSurface(patch))
+    .map(surface => drawSurface(surface, { orientation: 'inward' }))
+    .forEach(surfaceObject => addDebugObject(surfaceObject))
+
+}

@@ -1,5 +1,9 @@
 {
-    "watch": ["src"],
+    "watch": [
+        "src",
+        "./*.json",
+        "./*.js"
+    ],
     "execMap": {
         "ts": "ts-node"
     }

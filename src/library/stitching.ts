@@ -67,11 +67,11 @@ export const mergeSurfaceByDistance = (surfaceControlPoints: BezierSurfaceContro
     const surfaces = surfaceControlPoints.map(s => generateSurface(s, { surfaceFidelity: 10 }))
 
     const buckets = {}
-    const faces = []
+    const faces: any[] = []
     let sIndex = 1
 
     for (const surface of surfaces) {
-        const remapList = []
+        const remapList: any[] = []
         surface.points.map((p, i) => ({ index: `${sIndex}_${i}`, ...p }))
             .forEach(el => {
                 const hash = el.origin.reduce((acc, val) => acc + (~~val), 0)

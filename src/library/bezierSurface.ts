@@ -3,7 +3,7 @@ import { range } from './collections'
 import { BezierControlPoints } from './bezier'
 import { Vec3 } from '@jscad/modeling/src/maths/vec3'
 import RecursiveArray from '@jscad/modeling/src/utils/recursiveArray'
-import { Geometry } from '@jscad/modeling/src/geometries/types'
+import { Geom3, Geometry } from '@jscad/modeling/src/geometries/types'
 import { colorize, RGB, RGBA } from '@jscad/modeling/src/colors'
 import { add, cross, normalize, scale, subtract } from './vector3'
 import { polyhedron, sphere } from '@jscad/modeling/src/primitives'
@@ -11,7 +11,8 @@ import { BezierSurfaceControlPoints, FaceIndices, Surface, SurfacePoint } from '
 import { translate } from '@jscad/modeling/src/operations/transforms'
 import { drawLine } from './draw'
 import { moveOriginByExtrusionSize, _extrudeSurface } from './surfaceExtrusion'
-import { additionalGeometry } from '../keyboard'
+import { additionalGeometry } from '../design/design'
+import { ObjectTree } from '../jscad'
 
 interface QuadFace {
   faces: QuadIndices
@@ -124,13 +125,13 @@ export function drawSurface(
     drawBorder?: boolean
     drawSurface?: boolean
     drawPoints?: boolean
-  } = {}): Geometry | RecursiveArray<Geometry> {
+  } = {}): ObjectTree {
 
   const {
     points,
     faces
   }: Surface<SurfacePoint> = surfaceData
-  const result = []
+  const result: ObjectTree = []
 
   if (drawSurface) {
     const surface = polyhedron({
