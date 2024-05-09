@@ -2,7 +2,7 @@ import { colorize } from '@jscad/modeling/src/colors'
 import { Vec3 } from '@jscad/modeling/src/maths/vec3'
 import { mirror, translate } from '@jscad/modeling/src/operations/transforms'
 import { ObjectTree } from '../jscad'
-import { generateGeometryFromSurface, generateSurface } from '../library/bezierSurface'
+import { drawControlGrid, drawControlPoints, generateGeometryFromSurface, generateSurface } from '../library/bezierSurface'
 import { BezierSurfaceControlPoints } from '../library/surface'
 import { constructionLine } from '../library/utilities'
 import { diagonalStitch, horizontalStitch, verticalStitch } from '../library/stitching'
@@ -167,5 +167,10 @@ export const design = ({ addObject, addDebugObject }: SceneManipulation) => {
     ...patches.map(randomColorize),
     ...mirror({ normal: [1, 0, 0] }, patches).map(randomColorize)
   ].forEach(surfaceObject => addDebugObject(surfaceObject))
+
+  Object.values(surfacePatches).forEach(patch => {
+    addDebugObject(drawControlPoints(patch))
+    addDebugObject(drawControlGrid(patch))
+  })
 
 }

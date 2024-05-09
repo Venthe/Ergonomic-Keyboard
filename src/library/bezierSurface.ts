@@ -3,7 +3,7 @@ import { range } from './collections'
 import { BezierControlPoints } from './bezier'
 import { Vec3 } from '@jscad/modeling/src/maths/vec3'
 import { Geometry } from '@jscad/modeling/src/geometries/types'
-import { RGB, RGBA } from '@jscad/modeling/src/colors'
+import { RGB, RGBA, colorize } from '@jscad/modeling/src/colors'
 import { add, cross, normalize, scale, subtract } from './vector3'
 import { polyhedron, sphere } from '@jscad/modeling/src/primitives'
 import { BezierSurfaceControlPoints, FaceIndices, Surface, SurfacePoint } from './surface'
@@ -11,6 +11,8 @@ import { translate } from '@jscad/modeling/src/operations/transforms'
 import { drawLine } from './draw'
 import { _extrudeSurface } from './surfaceExtrusion'
 import { ObjectTree } from '../jscad'
+import { hull } from '@jscad/modeling/src/operations/hulls'
+import { transpose } from './array'
 
 interface QuadFace {
   faces: QuadIndices
@@ -222,4 +224,16 @@ const generateQuadIndices = (rowOffset: number, colOffset: number, pointsPerCont
   //   [v4Idx, v1Idx, v2Idx]
   //   ]
   // }
+}
+
+export const drawControlPoints = (surface: BezierSurfaceControlPoints) => {
+  return surface.flatMap(v => v).map(point => sphere({ center: point })).map(point => colorize([1, 0, 0], point))
+}
+
+export const drawControlGrid = (surface: BezierSurfaceControlPoints) => {
+  const ss = s => s.map(row => Array.from({ length: surface.length - 1 }, (v, i) => i).map(i => hull(sphere({ center: row[i], radius: 0.2 }), sphere({ center: row[i + 1], radius: 0.2 }))))
+  return [
+    ss(surface),
+    ss(transpose(surface))
+  ].map(point => colorize([0, 0, 1], point))
 }
