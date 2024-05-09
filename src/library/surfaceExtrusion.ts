@@ -3,7 +3,7 @@ import { Vec3 } from '@jscad/modeling/src/maths/vec3'
 import { subtract, union } from '@jscad/modeling/src/operations/booleans'
 import { polyhedron } from '@jscad/modeling/src/primitives'
 import RecursiveArray from '@jscad/modeling/src/utils/recursiveArray'
-import { drawSurface, generateSurface } from './bezierSurface'
+import { generateGeometryFromSurface, generateSurface } from './bezierSurface'
 import { Frame } from './Frame'
 import { BezierSurfaceControlPoints, FaceIndices, Surface, SurfacePoint } from './surface'
 import { add, normalize, scale } from './vector3'
@@ -202,7 +202,7 @@ export const generateExtrudedSurface = (
       )
     }
 
-    const extrudedSurface = drawSurface(extrudeSurface(nonTrimmedSurface, extrudeUp), { orientation: 'inward' }) as Geom3
+    const extrudedSurface = generateGeometryFromSurface(extrudeSurface(nonTrimmedSurface, extrudeUp), { orientation: 'inward' }) as Geom3
 
     const newLocal = cutBox(horizontalPoints[0], true)
     const newLocal_1 = cutBox(horizontalPoints[1], false)
@@ -220,6 +220,6 @@ export const generateExtrudedSurface = (
 
   } else {
     const extrudedSurface = extrudeSurface(finalSurface, extrudeUp)
-    return drawSurface(extrudedSurface, { orientation: 'inward' }) as Geom3;
+    return generateGeometryFromSurface(extrudedSurface, { orientation: 'inward' }) as Geom3;
   }
 }

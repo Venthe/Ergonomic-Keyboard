@@ -116,7 +116,7 @@ export const generateSurface = (
   }
 }
 
-export function drawSurface(
+export function generateGeometryFromSurface(
   surfaceData: Surface<SurfacePoint>,
   { drawSurface = true, ...options }: {
     colors?: Array<RGB | RGBA>

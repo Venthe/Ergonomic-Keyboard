@@ -5,7 +5,7 @@ import { mirror, translate } from '@jscad/modeling/src/operations/transforms'
 import RecursiveArray from '@jscad/modeling/src/utils/recursiveArray'
 import { MainFunction, ObjectTree } from '../jscad'
 import { BezierControlPoints, joinBezierByTangent } from '../library/bezier'
-import { drawSurface, generateSurface } from '../library/bezierSurface'
+import { generateGeometryFromSurface, generateSurface } from '../library/bezierSurface'
 import { drawContinuousPoints, drawPoints } from '../library/draw'
 import { FrameContext } from '../library/Frame'
 import { BezierSurfaceControlPoints } from '../library/surface'
@@ -323,7 +323,7 @@ export const _generateDesign: MainFunction = (params: DesignParameters) => {
     const numpad = {}
 
     scene.push(rightArcSurface
-      .map(s => drawSurface(s, { orientation: 'inward' }))
+      .map(s => generateGeometryFromSurface(s, { orientation: 'inward' }))
       .map(s => colorize([Math.random(), Math.random(), Math.random()], s))
     )
 
@@ -688,19 +688,25 @@ const prepareSurfacePatches = (): Record<string, BezierSurfaceControlPoints> => 
   // const arc_4_2: BezierSurfaceControlPoints = {}
 
   return {
-    ...{arc_0_0, arc_0_1, arc_0_2},
-    ...{arc_1_0, arc_1_1},
-    ...{arc_2_0},
-    ...{arc_3_0}
+    ...{ arc_0_0, arc_0_1, arc_0_2 },
+    ...{ arc_1_0, arc_1_1 },
+    ...{ arc_2_0 },
+    ...{ arc_3_0 }
   }
 }
+
+const randomColorize = (geometry) => colorize([(Math.random() % 0.3) + 0.5, (Math.random() % 0.3) + 0.5, (Math.random() % 0.3) + 0.5], geometry)
 
 export const design = ({ addObject, addDebugObject }: SceneManipulation) => {
   const surfacePatches = prepareSurfacePatches()
 
-  Object.values(surfacePatches)
+  const patches = Object.values(surfacePatches)
     .map(patch => generateSurface(patch))
-    .map(surface => drawSurface(surface, { orientation: 'inward' }))
-    .forEach(surfaceObject => addDebugObject(surfaceObject))
+    .map(surface => generateGeometryFromSurface(surface, { orientation: 'inward' }));
+
+  [
+    ...patches.map(randomColorize),
+    ...mirror({ normal: [1, 0, 0] }, patches).map(randomColorize)
+  ].forEach(surfaceObject => addDebugObject(surfaceObject))
 
 }
