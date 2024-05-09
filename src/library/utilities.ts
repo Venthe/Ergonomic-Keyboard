@@ -17,7 +17,7 @@ export function constructionLine({ start, stop, label }: { start: Vec3, stop: Ve
   }
 
   const constructionLineWidth = params.Debug_point_base_size * 0.35
-  const constructionLineSegmentLength = 2
+  const constructionLineSegmentLength = 4
   const distance = vec3.distance(start, stop)
   const segments = Math.floor(distance / constructionLineSegmentLength)
   const singleSegment = vec3.scale([0, 0, 0], (vec3.subtract([0, 0, 0], stop, start)), 1 / segments)
@@ -38,8 +38,8 @@ export function constructionLine({ start, stop, label }: { start: Vec3, stop: Ve
     const lastPoint = (s + 1 > (points.length - 1)) ? points.length - 1 : s + 1
     geometry.push(
       hulls.hull(
-        sphere({ center: points[s], radius: constructionLineWidth }),
-        sphere({ center: points[lastPoint], radius: constructionLineWidth })
+        sphere({ center: points[s], radius: constructionLineWidth, segments: 4 }),
+        sphere({ center: points[lastPoint], radius: constructionLineWidth, segments: 4 })
       )
     )
   }
