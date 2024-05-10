@@ -9,21 +9,22 @@ const loadPropertiesOverride = (): Partial<DesignParameters> => {
     }
 }
 
-const validateParameters = (parameters: DesignParameters) => {
-    const incorrectKeys = Object.keys(parameters).filter(k => ![...parametersKeys, ...calculatedParameterKeys].includes(k))
+const validateParameters = (parameters: string[], log?: string) => {
+    const incorrectKeys = parameters.filter(k => ![...parametersKeys, ...calculatedParameterKeys].includes(k))
     if (incorrectKeys.length > 0) {
-        throw new Error(`Incorrect parameters: ${incorrectKeys}`)
+        throw new Error([log, `Incorrect keys: ${incorrectKeys}`].filter(a => !!a).join(" "))
     }
 }
 
 export const loadParameters = (designParameters?: DesignParameters): ExtendedParams => {
+    const parameterDefinitions = getDesignParametersDefinitions()
+    validateParameters(parameterDefinitions.filter(def => def.type !== 'group').map(def => def.name), "Parameter definition")
+
     if (designParameters) {
         const calculatedParameters = deriveDesignParameters(designParameters)
-        validateParameters(calculatedParameters)
+        validateParameters(Object.keys(calculatedParameters), "Parameters from JSCAD")
         return calculatedParameters
     }
-
-    const parameterDefinitions = getDesignParametersDefinitions()
 
     const initialValues = parameterDefinitions
         .filter(o => !!o.initial)
@@ -35,6 +36,6 @@ export const loadParameters = (designParameters?: DesignParameters): ExtendedPar
     const propertiesOverride = loadPropertiesOverride()
 
     const parameters: ExtendedParams = deriveDesignParameters({ ...initialValues, ...propertiesOverride })
-    validateParameters(parameters)
+    validateParameters(Object.keys(parameters), "Merged parameters")
     return parameters
 }

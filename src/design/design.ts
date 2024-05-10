@@ -152,10 +152,26 @@ const randomColorize = (geometry) => colorize([(Math.random() % 0.3) + 0.5, (Mat
 
 export const design = ({ addObject, addDebugObject }: SceneManipulation) => {
   const surfacePatches = prepareSurfacePatches()
+  const undefinedPatches = {
+    arc_1_2: undefined,
+    arc_2_1: undefined,
+    arc_2_2: undefined,
+    arc_3_1: undefined,
+    arc_3_2: undefined,
+    arc_cap_0: undefined,
+    arc_cap_1: undefined,
+    arc_cap_2: undefined,
+    arc_to_straight_connector_0: undefined,
+    arc_to_straight_connector_1: undefined,
+    arc_to_straight_connector_2: undefined,
+    straight_0: undefined,
+    straight_1: undefined,
+    straight_2: undefined,
+  }
 
   addDebugObject(params => {
     const result = constructionBlockKeyboardArc(params)
-    return [result, mirror({normal: [1, 0, 0]}, result)]
+    return [result, mirror({ normal: [1, 0, 0] }, result)]
   })
   addDebugObject(params => mirror({ normal: [1, 0, 0] }, translate([params.Arc_width + params.Key_padding, 0, 0], constructionBlockKeyboardStraight(params))))
 
@@ -172,5 +188,8 @@ export const design = ({ addObject, addDebugObject }: SceneManipulation) => {
     addDebugObject(drawControlPoints(patch))
     addDebugObject(drawControlGrid(patch))
   })
+
+
+  
 
 }
